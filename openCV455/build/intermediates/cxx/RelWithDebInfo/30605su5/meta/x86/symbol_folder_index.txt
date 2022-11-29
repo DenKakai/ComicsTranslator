@@ -1,0 +1,1 @@
+C:\Users\Tomcio\AndroidStudioProjects\PDFReader4\openCV455\build\intermediates\cxx\RelWithDebInfo\30605su5\obj\x86
