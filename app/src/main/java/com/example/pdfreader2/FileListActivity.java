@@ -23,6 +23,7 @@ public class FileListActivity extends AppCompatActivity {
         String path = getIntent().getStringExtra("path");
 
         File root = new File(path);
+        //TODO: sprawdzic czy to na dole sorted wystarczy do posortowania czy moze po dacie to jest i nic nie trzeba zrobic?
         File[] filesAndFolders = root.listFiles();
 
         if(filesAndFolders == null || filesAndFolders.length == 0) {

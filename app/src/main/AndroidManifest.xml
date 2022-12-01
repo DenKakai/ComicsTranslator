@@ -16,7 +16,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.PDFReader2"
-        tools:targetApi="28">
+        tools:targetApi="32">
         <activity
             android:name=".FindingBubblesActivity"
             android:exported="false">
