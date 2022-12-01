@@ -41,8 +41,6 @@ import org.opencv.imgproc.Imgproc;
 
 public class PdfViewerActivity extends AppCompatActivity {
 
-
-
     private PDFView pdfView;
     private Button mZoomInButton;
     private Button mZoomOutButton;
@@ -96,6 +94,7 @@ public class PdfViewerActivity extends AppCompatActivity {
 
 
         //przyblizenie
+        //TODO: sprawdzic, czy mozna po prostu zmienic w obiekcie PDFView DEFAULT_MID_SCALE na 2f
         mZoomInButton = (Button) findViewById(R.id.zoomIn);
         mZoomInButton.setOnClickListener(new View.OnClickListener() {
 
@@ -175,7 +174,6 @@ public class PdfViewerActivity extends AppCompatActivity {
             }
         });
     }
-
 
     //zmiana pdfa na liste bitmap
     private ArrayList<Bitmap> pdfToBitmap(File pdfFile) {
