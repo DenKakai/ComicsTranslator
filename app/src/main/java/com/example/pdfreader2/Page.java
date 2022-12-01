@@ -27,6 +27,10 @@ public class Page {
         this.orig_image = Imgcodecs.imread(orig_image_path, Imgcodecs.IMREAD_ANYCOLOR);
     }
 
+    public void setSpeech_bubbles(List<Rectangle> speech_bubbles) {
+        this.speech_bubbles = speech_bubbles;
+    }
+
     public Page(Bitmap bmp) {
         Mat mat = new Mat();
         Bitmap bmp32 = bmp.copy(Bitmap.Config.RGB_565, true);
@@ -38,9 +42,7 @@ public class Page {
         this.orig_image = mat;
     }
 
-    public Page() {
-
-    }
+    public Page() {}
 
     public Mat getOrig_image() {
         return orig_image;
@@ -50,18 +52,18 @@ public class Page {
         return speech_bubbles;
     }
 
-    public void generate_speech_bubbles(double min_confidence, double scale,
+    public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
                                         BubblesDetector bubblesDetector) {
-        generate_speech_bubbles(min_confidence, scale, bubblesDetector, 0.2);
+        return generate_speech_bubbles(min_confidence, scale, bubblesDetector, 0.2);
     }
 
-    public void generate_speech_bubbles(double min_confidence, double scale,
+    public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
                                         BubblesDetector bubblesDetector, double percentage_bigger_frames) {
         int W = this.orig_image.cols();
         int H = this.orig_image.rows();
         int bigger_frame_Wpx = (int)(percentage_bigger_frames / 100 * W);
         int bigger_frame_Hpx = (int)(percentage_bigger_frames / 100 * H);
-        generate_speech_bubbles(min_confidence, scale, bubblesDetector,
+        return generate_speech_bubbles(min_confidence, scale, bubblesDetector,
                 bigger_frame_Wpx, bigger_frame_Hpx);
     }
 
@@ -78,7 +80,7 @@ public class Page {
         return ImageIO.read(new ByteArrayInputStream(mob.toArray()));
     }*/
 
-    public void generate_speech_bubbles(double min_confidence, double scale,
+    public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
                                         BubblesDetector bubblesDetector, int bigger_frame_Wpx,
                                         int bigger_frame_Hpx) {
         Mat image = new Mat();
@@ -152,7 +154,7 @@ public class Page {
             rect.setStartY((int)(rect.getStartY() * rH));
             rect.setEndY((int)(rect.getEndY() * rH));
         }
-        this.speech_bubbles = makeBiggerRectangles(rects, bigger_frame_Wpx, bigger_frame_Hpx);
+        return makeBiggerRectangles(rects, bigger_frame_Wpx, bigger_frame_Hpx);
     }
 
     public void reduce_speech_bubbles(double min_confidence, double scale,
@@ -221,6 +223,24 @@ public class Page {
             Imgproc.rectangle(image, point1, point2, color, thickness);
         }
         Imgcodecs.imwrite(output_path, image);
+    }
+
+    public Bitmap image_with_speech_bubbles(int thickness) {
+        Mat image = new Mat();
+        this.orig_image.copyTo(image);
+
+        for (Rectangle rect : this.speech_bubbles) {
+            Point point1 = new Point(rect.getStartX(), rect.getStartY());
+            Point point2 = new Point(rect.getEndX(), rect.getEndY());
+            Scalar color = new Scalar(0, 255, 0);
+            Imgproc.rectangle(image, point1, point2, color, thickness);
+        }
+        //
+        final Bitmap bitmap = Bitmap.createBitmap(image.cols(), image.rows(), Bitmap.Config.RGB_565);
+        Utils.matToBitmap(image, bitmap);
+        //
+
+        return bitmap;
     }
 
     private static List<Rectangle> makeBiggerRectangles(List<Rectangle> rectangles,
