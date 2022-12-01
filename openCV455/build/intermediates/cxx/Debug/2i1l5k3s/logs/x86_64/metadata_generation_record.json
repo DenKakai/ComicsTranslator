@@ -11,11 +11,11 @@
       "fieldsDescending": {}
     },
     "memoizedSize": -1,
-    "memoizedHashCode": -936140289
+    "memoizedHashCode": 226028803
   },
   {
     "level_": 0,
-    "message_": "rebuilding JSON C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\.cxx\\Debug\\2i1l5k3s\\x86_64\\android_gradle_build.json due to:",
+    "message_": "JSON \u0027C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\.cxx\\Debug\\2i1l5k3s\\x86_64\\android_gradle_build.json\u0027 was up-to-date",
     "file_": "C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\libcxx_helper\\CMakeLists.txt",
     "tag_": "debug|x86_64",
     "diagnosticCode_": 0,
@@ -25,147 +25,7 @@
       "fieldsDescending": {}
     },
     "memoizedSize": -1,
-    "memoizedHashCode": -1353786382
-  },
-  {
-    "level_": 0,
-    "message_": "- expected json C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\.cxx\\Debug\\2i1l5k3s\\x86_64\\android_gradle_build.json file is not present, will remove stale json folder",
-    "file_": "C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\libcxx_helper\\CMakeLists.txt",
-    "tag_": "debug|x86_64",
-    "diagnosticCode_": 0,
-    "memoizedIsInitialized": 1,
-    "unknownFields": {
-      "fields": {},
-      "fieldsDescending": {}
-    },
-    "memoizedSize": -1,
-    "memoizedHashCode": -1984025558
-  },
-  {
-    "level_": 0,
-    "message_": "- missing previous command file C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\.cxx\\Debug\\2i1l5k3s\\x86_64\\metadata_generation_command.txt, will remove stale json folder",
-    "file_": "C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\libcxx_helper\\CMakeLists.txt",
-    "tag_": "debug|x86_64",
-    "diagnosticCode_": 0,
-    "memoizedIsInitialized": 1,
-    "unknownFields": {
-      "fields": {},
-      "fieldsDescending": {}
-    },
-    "memoizedSize": -1,
-    "memoizedHashCode": -1199328664
-  },
-  {
-    "level_": 0,
-    "message_": "- command changed from previous, will remove stale json folder",
-    "file_": "C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\libcxx_helper\\CMakeLists.txt",
-    "tag_": "debug|x86_64",
-    "diagnosticCode_": 0,
-    "memoizedIsInitialized": 1,
-    "unknownFields": {
-      "fields": {},
-      "fieldsDescending": {}
-    },
-    "memoizedSize": -1,
-    "memoizedHashCode": -2136650230
-  },
-  {
-    "level_": 0,
-    "message_": "removing stale contents from \u0027C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\.cxx\\Debug\\2i1l5k3s\\x86_64\u0027",
-    "file_": "C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\libcxx_helper\\CMakeLists.txt",
-    "tag_": "debug|x86_64",
-    "diagnosticCode_": 0,
-    "memoizedIsInitialized": 1,
-    "unknownFields": {
-      "fields": {},
-      "fieldsDescending": {}
-    },
-    "memoizedSize": -1,
-    "memoizedHashCode": -1337491098
-  },
-  {
-    "level_": 0,
-    "message_": "created folder \u0027C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\.cxx\\Debug\\2i1l5k3s\\x86_64\u0027",
-    "file_": "C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\libcxx_helper\\CMakeLists.txt",
-    "tag_": "debug|x86_64",
-    "diagnosticCode_": 0,
-    "memoizedIsInitialized": 1,
-    "unknownFields": {
-      "fields": {},
-      "fieldsDescending": {}
-    },
-    "memoizedSize": -1,
-    "memoizedHashCode": -1122454310
-  },
-  {
-    "level_": 0,
-    "message_": "executing cmake @echo off\n\"C:\\\\Users\\\\Tomcio\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\cmake\\\\3.18.1\\\\bin\\\\cmake.exe\" ^\n  \"-HC:\\\\Users\\\\Tomcio\\\\AndroidStudioProjects\\\\PDFReader4\\\\ComicsTranslator\\\\openCV455\\\\libcxx_helper\" ^\n  \"-DCMAKE_SYSTEM_NAME\u003dAndroid\" ^\n  \"-DCMAKE_EXPORT_COMPILE_COMMANDS\u003dON\" ^\n  \"-DCMAKE_SYSTEM_VERSION\u003d21\" ^\n  \"-DANDROID_PLATFORM\u003dandroid-21\" ^\n  \"-DANDROID_ABI\u003dx86_64\" ^\n  \"-DCMAKE_ANDROID_ARCH_ABI\u003dx86_64\" ^\n  \"-DANDROID_NDK\u003dC:\\\\Users\\\\Tomcio\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\ndk\\\\23.1.7779620\" ^\n  \"-DCMAKE_ANDROID_NDK\u003dC:\\\\Users\\\\Tomcio\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\ndk\\\\23.1.7779620\" ^\n  \"-DCMAKE_TOOLCHAIN_FILE\u003dC:\\\\Users\\\\Tomcio\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\ndk\\\\23.1.7779620\\\\build\\\\cmake\\\\android.toolchain.cmake\" ^\n  \"-DCMAKE_MAKE_PROGRAM\u003dC:\\\\Users\\\\Tomcio\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\cmake\\\\3.18.1\\\\bin\\\\ninja.exe\" ^\n  \"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY\u003dC:\\\\Users\\\\Tomcio\\\\AndroidStudioProjects\\\\PDFReader4\\\\ComicsTranslator\\\\openCV455\\\\build\\\\intermediates\\\\cxx\\\\Debug\\\\2i1l5k3s\\\\obj\\\\x86_64\" ^\n  \"-DCMAKE_RUNTIME_OUTPUT_DIRECTORY\u003dC:\\\\Users\\\\Tomcio\\\\AndroidStudioProjects\\\\PDFReader4\\\\ComicsTranslator\\\\openCV455\\\\build\\\\intermediates\\\\cxx\\\\Debug\\\\2i1l5k3s\\\\obj\\\\x86_64\" ^\n  \"-DCMAKE_BUILD_TYPE\u003dDebug\" ^\n  \"-BC:\\\\Users\\\\Tomcio\\\\AndroidStudioProjects\\\\PDFReader4\\\\ComicsTranslator\\\\openCV455\\\\.cxx\\\\Debug\\\\2i1l5k3s\\\\x86_64\" ^\n  -GNinja ^\n  \"-DANDROID_STL\u003dc++_shared\"\n",
-    "file_": "C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\libcxx_helper\\CMakeLists.txt",
-    "tag_": "debug|x86_64",
-    "diagnosticCode_": 0,
-    "memoizedIsInitialized": 1,
-    "unknownFields": {
-      "fields": {},
-      "fieldsDescending": {}
-    },
-    "memoizedSize": -1,
-    "memoizedHashCode": -1230830636
-  },
-  {
-    "level_": 0,
-    "message_": "@echo off\n\"C:\\\\Users\\\\Tomcio\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\cmake\\\\3.18.1\\\\bin\\\\cmake.exe\" ^\n  \"-HC:\\\\Users\\\\Tomcio\\\\AndroidStudioProjects\\\\PDFReader4\\\\ComicsTranslator\\\\openCV455\\\\libcxx_helper\" ^\n  \"-DCMAKE_SYSTEM_NAME\u003dAndroid\" ^\n  \"-DCMAKE_EXPORT_COMPILE_COMMANDS\u003dON\" ^\n  \"-DCMAKE_SYSTEM_VERSION\u003d21\" ^\n  \"-DANDROID_PLATFORM\u003dandroid-21\" ^\n  \"-DANDROID_ABI\u003dx86_64\" ^\n  \"-DCMAKE_ANDROID_ARCH_ABI\u003dx86_64\" ^\n  \"-DANDROID_NDK\u003dC:\\\\Users\\\\Tomcio\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\ndk\\\\23.1.7779620\" ^\n  \"-DCMAKE_ANDROID_NDK\u003dC:\\\\Users\\\\Tomcio\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\ndk\\\\23.1.7779620\" ^\n  \"-DCMAKE_TOOLCHAIN_FILE\u003dC:\\\\Users\\\\Tomcio\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\ndk\\\\23.1.7779620\\\\build\\\\cmake\\\\android.toolchain.cmake\" ^\n  \"-DCMAKE_MAKE_PROGRAM\u003dC:\\\\Users\\\\Tomcio\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\cmake\\\\3.18.1\\\\bin\\\\ninja.exe\" ^\n  \"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY\u003dC:\\\\Users\\\\Tomcio\\\\AndroidStudioProjects\\\\PDFReader4\\\\ComicsTranslator\\\\openCV455\\\\build\\\\intermediates\\\\cxx\\\\Debug\\\\2i1l5k3s\\\\obj\\\\x86_64\" ^\n  \"-DCMAKE_RUNTIME_OUTPUT_DIRECTORY\u003dC:\\\\Users\\\\Tomcio\\\\AndroidStudioProjects\\\\PDFReader4\\\\ComicsTranslator\\\\openCV455\\\\build\\\\intermediates\\\\cxx\\\\Debug\\\\2i1l5k3s\\\\obj\\\\x86_64\" ^\n  \"-DCMAKE_BUILD_TYPE\u003dDebug\" ^\n  \"-BC:\\\\Users\\\\Tomcio\\\\AndroidStudioProjects\\\\PDFReader4\\\\ComicsTranslator\\\\openCV455\\\\.cxx\\\\Debug\\\\2i1l5k3s\\\\x86_64\" ^\n  -GNinja ^\n  \"-DANDROID_STL\u003dc++_shared\"\n",
-    "file_": "C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\libcxx_helper\\CMakeLists.txt",
-    "tag_": "debug|x86_64",
-    "diagnosticCode_": 0,
-    "memoizedIsInitialized": 1,
-    "unknownFields": {
-      "fields": {},
-      "fieldsDescending": {}
-    },
-    "memoizedSize": -1,
-    "memoizedHashCode": -820596269
-  },
-  {
-    "level_": 0,
-    "message_": "Exiting generation of C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\.cxx\\Debug\\2i1l5k3s\\x86_64\\compile_commands.json.bin normally",
-    "file_": "C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\libcxx_helper\\CMakeLists.txt",
-    "tag_": "debug|x86_64",
-    "diagnosticCode_": 0,
-    "memoizedIsInitialized": 1,
-    "unknownFields": {
-      "fields": {},
-      "fieldsDescending": {}
-    },
-    "memoizedSize": -1,
-    "memoizedHashCode": -1764045744
-  },
-  {
-    "level_": 0,
-    "message_": "done executing cmake",
-    "file_": "C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\libcxx_helper\\CMakeLists.txt",
-    "tag_": "debug|x86_64",
-    "diagnosticCode_": 0,
-    "memoizedIsInitialized": 1,
-    "unknownFields": {
-      "fields": {},
-      "fieldsDescending": {}
-    },
-    "memoizedSize": -1,
-    "memoizedHashCode": 1845970815
-  },
-  {
-    "level_": 0,
-    "message_": "write command file C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\.cxx\\Debug\\2i1l5k3s\\x86_64\\metadata_generation_command.txt",
-    "file_": "C:\\Users\\Tomcio\\AndroidStudioProjects\\PDFReader4\\ComicsTranslator\\openCV455\\libcxx_helper\\CMakeLists.txt",
-    "tag_": "debug|x86_64",
-    "diagnosticCode_": 0,
-    "memoizedIsInitialized": 1,
-    "unknownFields": {
-      "fields": {},
-      "fieldsDescending": {}
-    },
-    "memoizedSize": -1,
-    "memoizedHashCode": 1746385020
+    "memoizedHashCode": 2007905613
   },
   {
     "level_": 0,
@@ -179,6 +39,6 @@
       "fieldsDescending": {}
     },
     "memoizedSize": -1,
-    "memoizedHashCode": -510923397
+    "memoizedHashCode": 651245695
   }
 ]

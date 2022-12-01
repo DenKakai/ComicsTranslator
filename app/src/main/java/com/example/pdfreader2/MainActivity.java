@@ -41,46 +41,34 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Uri uri = Uri.parse("package:" + BuildConfig.APPLICATION_ID);
-        Intent intentSettings = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, uri);
-        startActivity(intentSettings);
+
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            Uri uri = Uri.parse("package:" + BuildConfig.APPLICATION_ID);
+            Intent intentSettings = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, uri);
+            startActivity(intentSettings);
+        }
 
         //Loader.load(opencv_java.class)
         OpenCVLoader.initDebug();
 
         //wczytanie pdf
-        //TODO: PODAWAĆ PLIK/NAZWĘ JAKO PARAMETR, ZROBIĆ EKSPLORER PLIKÓW ANDROIDA pdfView.fromFile()
         mLoadPDF = (Button)findViewById(R.id.loadPDF);
         mLoadPDF.setOnClickListener(new View.OnClickListener() {
-
-
             @Override
             public void onClick(View view) {
-                /**createLoadPDFPopup();
-                 * to bylo do popup
-                 *
-                 * */
-
                 if (checkPermission()) {
                     Intent intent = new Intent(MainActivity.this, FileListActivity.class);
                     String path = Environment.getExternalStorageDirectory().getPath();
                     intent.putExtra("path", path);
                     startActivity(intent);
-                    //
                 }else {
                     requestPermission();
                 }
-
-
             }
         });
-
-
-
     }
 
     //test menadzera plikow
-
     private boolean checkPermission() {
         int result = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
         if (result == PackageManager.PERMISSION_GRANTED) {
