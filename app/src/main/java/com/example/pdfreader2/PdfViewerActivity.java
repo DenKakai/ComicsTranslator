@@ -13,6 +13,9 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
@@ -32,6 +35,8 @@ import android.os.Process;
 
 import com.github.barteksc.pdfviewer.PDFView;
 import com.github.barteksc.pdfviewer.listener.Callbacks;
+import com.github.barteksc.pdfviewer.listener.OnDrawListener;
+import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.shockwave.pdfium.util.SizeF;
@@ -81,6 +86,8 @@ public class PdfViewerActivity extends AppCompatActivity{
         pdfView = findViewById(R.id.pdfView);
         pdfView.fromFile(file)
                 .onTap(new onTapListener())
+                .onDraw(new OnDrawListener())
+                .onPageScroll(new OnPageScrollListener())
                 .fitEachPage(true)
                 .pageFitPolicy(FitPolicy.HEIGHT)
                 .swipeHorizontal(true)
@@ -384,6 +391,26 @@ public class PdfViewerActivity extends AppCompatActivity{
         }
 
         return resultRectangle;
+    }
+
+    private class OnPageScrollListener implements com.github.barteksc.pdfviewer.listener.OnPageScrollListener {
+        @Override
+        public void onPageScrolled(int page, float positionOffset) {
+            Log.d("Scroll", "Lis jest mega fajny serio");
+        }
+    }
+
+    private class OnDrawListener implements com.github.barteksc.pdfviewer.listener.OnDrawListener {
+        @Override
+        public void onLayerDrawn(Canvas canvas, float pageWidth, float pageHeight, int displayedPage) {
+            int x=400;
+            int y=400;
+            int radius=40;
+            Paint paint=new Paint();
+            // Use Color.parseColor to define HTML colors
+            paint.setColor(Color.parseColor("#CD5C5C"));
+            canvas.drawCircle(x, y, radius, paint);
+        }
     }
 
     private class onTapListener implements OnTapListener {
