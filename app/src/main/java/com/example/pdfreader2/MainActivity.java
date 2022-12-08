@@ -48,6 +48,8 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intentSettings);
         }
 
+        Log.d("lis", String.valueOf(getResources().getDisplayMetrics().densityDpi));
+
         //Loader.load(opencv_java.class)
         OpenCVLoader.initDebug();
 

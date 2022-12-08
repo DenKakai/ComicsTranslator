@@ -6,11 +6,14 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
+import android.graphics.PointF;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
 import android.os.Bundle;
@@ -21,13 +24,17 @@ import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 import android.os.Process;
 
 import com.github.barteksc.pdfviewer.PDFView;
+import com.github.barteksc.pdfviewer.listener.Callbacks;
+import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
+import com.shockwave.pdfium.util.SizeF;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -41,9 +48,13 @@ import java.util.List;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
+import org.opencv.core.Rect;
 import org.opencv.imgproc.Imgproc;
 
-public class PdfViewerActivity extends AppCompatActivity {
+//TODO: dodalem nowa klase, ktora jest identyczna jak PdfFile, tylko zmienilem package. Trzeba sprawdzic czy to dziala.
+import com.github.barteksc.pdfviewer.PDFView;
+
+public class PdfViewerActivity extends AppCompatActivity{
 
     private PDFView pdfView;
     private Button mZoomInButton;
@@ -51,6 +62,10 @@ public class PdfViewerActivity extends AppCompatActivity {
     private Button mPageLeftButton;
     private Button mPageRightButton;
     private Button mFindBubblesButton;
+
+    //TODO: do wywalenia
+    private Button mLogBubblesButton;
+
     private Page page;
     private ArrayList<Bitmap> pdfAsListOfBitmaps;
     private Handler mainHandler = new Handler();
@@ -65,6 +80,7 @@ public class PdfViewerActivity extends AppCompatActivity {
 
         pdfView = findViewById(R.id.pdfView);
         pdfView.fromFile(file)
+                .onTap(new onTapListener())
                 .fitEachPage(true)
                 .pageFitPolicy(FitPolicy.HEIGHT)
                 .swipeHorizontal(true)
@@ -72,6 +88,9 @@ public class PdfViewerActivity extends AppCompatActivity {
                 .autoSpacing(true)
                 .pageFling(true)
                 .load();
+
+        pdfView.setMidZoom(2f);
+
 
         /*pdfAsListOfBitmaps = pdfToBitmap(file);
 
@@ -97,8 +116,11 @@ public class PdfViewerActivity extends AppCompatActivity {
         Log.d("TEST_BITMAPY", String.valueOf(page.getSpeech_bubbles()));**/
 
 
+        //TODO: Do kazdego guzika zrobic wyszarzanie, kiedy ma nie byc mozliwa akcja
+        //TODO: Naprawic zoomout by na np. 172% zooma spadlo do 100%
+
+
         //przyblizenie
-        //TODO: sprawdzic, czy mozna po prostu zmienic w obiekcie PDFView DEFAULT_MID_SCALE na 2f
         mZoomInButton = (Button) findViewById(R.id.zoomIn);
         mZoomInButton.setOnClickListener(new View.OnClickListener() {
 
@@ -177,6 +199,17 @@ public class PdfViewerActivity extends AppCompatActivity {
                 new Thread(runnable).start();
             }
         });
+
+        //log dymkow
+
+        mLogBubblesButton = (Button) findViewById(R.id.logBubbles);
+        mLogBubblesButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View view) {
+                Log.d("TESTWYKRYCIA", String.valueOf(page.getSpeech_bubbles()));
+            }
+        });
     }
 
     //zmiana pdfa na liste bitmap
@@ -237,9 +270,6 @@ public class PdfViewerActivity extends AppCompatActivity {
         return "";
     }
 
-
-
-
     class ExampleRunnable implements Runnable {
         int DDpi;
         File file;
@@ -278,9 +308,10 @@ public class PdfViewerActivity extends AppCompatActivity {
                 Log.d("THREAD_TEST", "endpdfPageAsBitmapThread" + pdfPageAsBitmap);
 
                 Log.d("THREAD_TEST", "startGenerateSpeechBubblesThread");
-                page = new Page(pdfPageAsBitmap);
+                Page page2 = new Page(pdfPageAsBitmap);
                 List<Rectangle> speechBubbles;
-                speechBubbles = page.generate_speech_bubbles(0.5, 0.35, bubblesDetector);
+                speechBubbles = page2.generate_speech_bubbles(0.5, 0.35, bubblesDetector);
+                page2.setSpeech_bubbles(speechBubbles);
                 Log.d("THREAD_TEST", "endGenerateSpeechBubblesThread" + speechBubbles.toArray().length + speechBubbles);
 
                 threadHandler.post(new Runnable() {
@@ -291,17 +322,18 @@ public class PdfViewerActivity extends AppCompatActivity {
                         mFindBubblesButton.setEnabled(true);
                         mFindBubblesButton.setAlpha(1f);
                         mFindBubblesButton.setClickable(true);
+                        page.setOrig_image(page2.getOrig_image());
                         page.setSpeech_bubbles(speechBubbles);
                         Log.d("THREAD_TEST", "endUIThread");
                     }
                 });
 
-                Page page2 = new Page(pdfPageAsBitmap);
-                page2.setSpeech_bubbles(speechBubbles);
+                //Page page2 = new Page(pdfPageAsBitmap);
+                //page2.setSpeech_bubbles(speechBubbles);
 
                 Bitmap bitmap = page2.image_with_speech_bubbles(3);
                 //TODO: wywalic to kiedys, teraz jest do testu tylko
-                //MediaStore.Images.Media.insertImage(getContentResolver(), bitmap, "testowyObrazekRectangle4", "lolxd");
+                MediaStore.Images.Media.insertImage(getContentResolver(), bitmap, "testowyObrazekRectangle8", "lolxd");
                 Log.d("THREAD_TEST", "endThread");
             } catch (Exception e) {
                 e.printStackTrace();
@@ -316,8 +348,13 @@ public class PdfViewerActivity extends AppCompatActivity {
                 PdfRenderer renderer = new PdfRenderer(ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY));
                 PdfRenderer.Page page = renderer.openPage(pageIdx);
 
-                int width = DDpi / 72 * page.getWidth();
-                int height = DDpi / 72 * page.getHeight();
+                //TODO: zakomentowane, bo testujemy
+                //int width = DDpi / 72 * page.getWidth();
+                //int height = DDpi / 72 * page.getHeight();
+
+                int width = 3740;
+                int height = 4895;
+
                 bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 
                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
@@ -336,6 +373,92 @@ public class PdfViewerActivity extends AppCompatActivity {
 
     }
 
+    private Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
+        Rectangle resultRectangle = null;
+
+        for (Rectangle rectangle : rectangles) {
+            if (rectangle.getStartX() <= x && x <= rectangle.getEndX() && rectangle.getStartY() <= y && y <= rectangle.getEndY()) {
+                resultRectangle = rectangle;
+                break;
+            }
+        }
+
+        return resultRectangle;
+    }
+
+    private class onTapListener implements OnTapListener {
+        @Override
+        public boolean onTap(MotionEvent e) {
+
+            //x, y = piksel EKRANU TELEFONU
+            //mappedX, mappedY = piksel CAŁEJ WSTĘGI PDFA, jezeli jest przyblizony, to wtedy przyblizonego
+            //thisPageX, <mappedY> = piksel AKTUALNEJ STRONY, jezeli jest przyblizona, to wtedy przyblizonej
+            //thisPageXRealScale, thisPageYRealScale = piksel AKTUALNEJ STRONY, jezeli jest przyblizona, to i tak zwraca normalne wymiary
+
+            float x = e.getX();
+            float y = e.getY();
+
+            float mappedX = -pdfView.getCurrentXOffset() + x;
+            float mappedY = -pdfView.getCurrentYOffset() + y;
+
+            float test = pdfView.getPositionOffset();
+            Log.d("ONTAPTEST", "x = " + e.getX() + " | y = " + e.getY());
+            Log.d("ONTAPTEST", "mappedX = " + mappedX + " | mappedY = " + mappedY);
+            Log.d("ONTAPTEST", "test = " + test);
+
+            int pageIdx = pdfView.getCurrentPage();
+
+            Log.d("ONTAPTEST", "PageIdx = " + pageIdx);
+
+            //W     xH
+            //1241.0x1674.0
+            float onePageWidth = pdfView.getPageSize(0).getWidth();
+            //mozliwe ze height jest niepotrzebne bo i tak mappedY nie jest zalezne od strony
+            float onePageHeight = pdfView.getPageSize(0).getHeight();
+            Log.d("ONTAPTEST", "getPageSize = " + pdfView.getPageSize(0));
+            Log.d("ONTAPTEST", "onePageWidth = " + onePageWidth + " | onePageHeight = " + onePageHeight);
+
+
+            float thisPageX = 0f;
+            float thisPageXRealScale = 0f;
+            if (pageIdx != 0) {
+                //TODO: teraz uznaje, ze kazda strona ma ten sam width, zrobic liste z suma kulumowana i brac z tego zamaist page * onePageWidth
+                thisPageX = mappedX - pageIdx * onePageWidth * pdfView.getZoom();
+            } else {
+                thisPageX = mappedX;
+            }
+            thisPageXRealScale = thisPageX / pdfView.getZoom();
+            float thisPageYRealScale = mappedY / pdfView.getZoom();
+
+            Log.d("ONTAPTEST", "thisPageX = " + thisPageX + " | mappedY = " + mappedY);
+            Log.d("ONTAPTEST", "thisPageXRealScale = " + thisPageXRealScale + " | thisPageYRealScale = " + thisPageYRealScale);
+
+            try {
+                float pageDetectorHeight = page.getOrig_image().rows();
+                float pageDetectorWidth = page.getOrig_image().cols();
+                Log.d("TESTWYKRYCIA", "pageDetectorHeight = " + pageDetectorHeight + " | pageDetectorWidth = " + pageDetectorWidth);
+
+                float proportionDetector = pageDetectorWidth / pageDetectorHeight;
+                float proportion = onePageWidth / onePageHeight;
+                Log.d("TESTWYKRYCIA", "proportionDetector = " + proportionDetector + " | proportion = " + proportion);
+
+                float proportionMapping = pageDetectorHeight / onePageHeight;
+                Log.d("TESTWYKRYCIA", "proportionMapping = " + proportionMapping);
+
+                Rectangle foundBubble = tappedRectangle(page.getSpeech_bubbles(), thisPageXRealScale * proportionMapping, thisPageYRealScale * proportionMapping);
+                /*foundBubble.setStartX((int) (foundBubble.getStartX() / proportionMapping));
+                foundBubble.setStartY((int) (foundBubble.getStartY() / proportionMapping));
+                foundBubble.setEndX((int) (foundBubble.getEndX() / proportionMapping));
+                foundBubble.setEndY((int) (foundBubble.getEndY() / proportionMapping));*/
+                Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
+            } catch (Exception exception) {
+                Log.d("TESTWYKRYCIA", String.valueOf(exception));
+            }
+
+            //Log.d("ONTAPTEST", "Page[0] = " + pdfView.getPageSize(0) + " | Page[1] = " + pdfView.getPageSize(1) + " | Page[2] = " + pdfView.getPageSize(2));
+            return false;
+        }
+    }
 }
 
 

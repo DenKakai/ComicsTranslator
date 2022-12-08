@@ -48,13 +48,29 @@ public class Page {
         return orig_image;
     }
 
+    public void setOrig_image(Mat orig_image) {
+        this.orig_image = orig_image;
+    }
+
+    public void setOrig_image(Bitmap bmp) {
+        Mat mat = new Mat();
+        Bitmap bmp32 = bmp.copy(Bitmap.Config.RGB_565, true);
+        Utils.bitmapToMat(bmp32, mat);
+
+        Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGRA2BGR);
+        //convertTo changes the depth/per_pixel_type, not the channel count.
+
+        this.orig_image = mat;
+    }
+
     public List<Rectangle> getSpeech_bubbles() {
         return speech_bubbles;
     }
 
     public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
                                         BubblesDetector bubblesDetector) {
-        return generate_speech_bubbles(min_confidence, scale, bubblesDetector, 0.2);
+        //TODO: zmienilismy z 0.2 na 0.0, bo cos zle wykrywa chmurki pikselowo
+        return generate_speech_bubbles(min_confidence, scale, bubblesDetector, 0.0);
     }
 
     public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
