@@ -91,14 +91,18 @@ public class Rectangle {
         return this.endX >= other.startX && this.startX <= other.endX;
     }
 
-    public boolean isOverlappingOrNear(Rectangle other, int neighbourPx) {
-        if ((this.endY + neighbourPx) < other.startY
-                || (this.startY - neighbourPx) > other.endY) {
+    public boolean isOverlappingOrNear(Rectangle other, int neighbourPx_w, int neighbourPx_h) {
+        if ((this.endY + neighbourPx_h) < other.startY
+                || (this.startY - neighbourPx_h) > other.endY) {
             return false;
         }
-        return (this.endX + neighbourPx) >= other.startX && (this.startX - neighbourPx) <= other.endX;
+        return (this.endX + neighbourPx_w) >= other.startX && (this.startX - neighbourPx_w) <= other.endX;
     }
 
+    public boolean isInside(Rectangle other) {
+        return (this.startX >= other.startX) & (this.endX <= other.endX) &
+                (this.startY >= other.startY) & (this.endY <= other.endY);
+    }
 
     public Rectangle makeBiggerRectangle(Rectangle other) {
         return new Rectangle(Math.min(this.startX, other.startX),
