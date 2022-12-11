@@ -4,6 +4,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.viewpager.widget.ViewPager;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -13,7 +14,11 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.PointF;
+import android.graphics.RectF;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
 import android.os.Bundle;
@@ -23,6 +28,9 @@ import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -32,8 +40,12 @@ import android.os.Process;
 
 import com.github.barteksc.pdfviewer.PDFView;
 import com.github.barteksc.pdfviewer.listener.Callbacks;
+import com.github.barteksc.pdfviewer.listener.OnDrawListener;
+import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
+import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
+import com.googlecode.tesseract.android.TessBaseAPI;
 import com.shockwave.pdfium.util.SizeF;
 
 import java.io.BufferedInputStream;
@@ -43,7 +55,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
@@ -62,6 +76,7 @@ public class PdfViewerActivity extends AppCompatActivity{
     private Button mPageLeftButton;
     private Button mPageRightButton;
     private Button mFindBubblesButton;
+    private Button mClearBubblesButton;
 
     //TODO: do wywalenia
     private Button mLogBubblesButton;
@@ -69,6 +84,9 @@ public class PdfViewerActivity extends AppCompatActivity{
     private Page page;
     private ArrayList<Bitmap> pdfAsListOfBitmaps;
     private Handler mainHandler = new Handler();
+    private List<Integer> cumXOffset = new ArrayList<>();
+
+    private Map<Integer, List<Rectangle>> translatedPages = new HashMap<Integer, List<Rectangle>>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,15 +99,19 @@ public class PdfViewerActivity extends AppCompatActivity{
         pdfView = findViewById(R.id.pdfView);
         pdfView.fromFile(file)
                 .onTap(new onTapListener())
+                .onDraw(new OnDrawListener())
+                //.onPageScroll(new OnPageScrollListener())
                 .fitEachPage(true)
                 .pageFitPolicy(FitPolicy.HEIGHT)
                 .swipeHorizontal(true)
                 .pageSnap(true)
                 .autoSpacing(true)
                 .pageFling(true)
+                .onPageChange(new OnPageChangeListener())
                 .load();
 
         pdfView.setMidZoom(2f);
+        
 
 
         /*pdfAsListOfBitmaps = pdfToBitmap(file);
@@ -116,7 +138,6 @@ public class PdfViewerActivity extends AppCompatActivity{
         Log.d("TEST_BITMAPY", String.valueOf(page.getSpeech_bubbles()));**/
 
 
-        //TODO: Do kazdego guzika zrobic wyszarzanie, kiedy ma nie byc mozliwa akcja
         //TODO: Naprawic zoomout by na np. 172% zooma spadlo do 100%
 
 
@@ -187,6 +208,13 @@ public class PdfViewerActivity extends AppCompatActivity{
         BubblesDetector bubblesDetector = new BubblesDetector(pathEast);
         Log.d("THREAD_TEST", "endOfEast");
 
+        Log.d("THREAD_TEST", "startOfANN");
+        String pathAnn = getPath("ANN_BubbleClassifier.yml", this);
+        BubblesClassifier bubblesClassifier = new BubblesClassifier(pathAnn);
+        Log.d("THREAD_TEST", "endOfANN");
+
+
+
         mFindBubblesButton = (Button) findViewById(R.id.findBubbles);
         mFindBubblesButton.setOnClickListener(new View.OnClickListener() {
 
@@ -195,22 +223,36 @@ public class PdfViewerActivity extends AppCompatActivity{
                 //mFindBubblesButton.setEnabled(false);
                 page = new Page();
                 int DDpi = getResources().getDisplayMetrics().densityDpi;
-                ExampleRunnable runnable = new ExampleRunnable(DDpi, file, pdfView.getCurrentPage(), page, bubblesDetector);
+                ExampleRunnable runnable = new ExampleRunnable(DDpi, file, pdfView.getCurrentPage(),
+                        page, bubblesDetector, bubblesClassifier);
                 new Thread(runnable).start();
             }
         });
 
         //log dymkow
 
-        mLogBubblesButton = (Button) findViewById(R.id.logBubbles);
+        /*mLogBubblesButton = (Button) findViewById(R.id.logBubbles);
         mLogBubblesButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View view) {
                 Log.d("TESTWYKRYCIA", String.valueOf(page.getSpeech_bubbles()));
             }
+        });*/
+
+        //czyszczenie chmurek
+
+        mClearBubblesButton = (Button) findViewById(R.id.clearBubbles);
+        mClearBubblesButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View view) {
+                translatedPages.remove(pdfView.getCurrentPage());
+            }
         });
     }
+
+
 
     //zmiana pdfa na liste bitmap
     private ArrayList<Bitmap> pdfToBitmap(File pdfFile) {
@@ -276,15 +318,18 @@ public class PdfViewerActivity extends AppCompatActivity{
         int pageIdx;
         Page page;
         BubblesDetector bubblesDetector;
+        BubblesClassifier bubblesClassifier;
 
         Bitmap pdfPageAsBitmap;
 
-        ExampleRunnable(int DDpi, File file, int pageIdx, Page page, BubblesDetector bubblesDetector) {
+        ExampleRunnable(int DDpi, File file, int pageIdx, Page page,
+                        BubblesDetector bubblesDetector, BubblesClassifier bubblesClassifier) {
             this.DDpi = DDpi;
             this.file = file;
             this.pageIdx = pageIdx;
             this.page = page;
             this.bubblesDetector = bubblesDetector;
+            this.bubblesClassifier = bubblesClassifier;
         }
 
         @Override
@@ -310,9 +355,26 @@ public class PdfViewerActivity extends AppCompatActivity{
                 Log.d("THREAD_TEST", "startGenerateSpeechBubblesThread");
                 Page page2 = new Page(pdfPageAsBitmap);
                 List<Rectangle> speechBubbles;
-                speechBubbles = page2.generate_speech_bubbles(0.5, 0.35, bubblesDetector);
+                speechBubbles = page2.generate_speech_bubbles(0.5, 0.5,
+                        bubblesDetector, 0.2,
+                        true, bubblesClassifier);
                 page2.setSpeech_bubbles(speechBubbles);
                 Log.d("THREAD_TEST", "endGenerateSpeechBubblesThread" + speechBubbles.toArray().length + speechBubbles);
+
+
+                Log.d("THREAD_TEST", "startChangingXYToReal");
+                float onePageWidth = pdfView.getPageSize(pageIdx).getWidth();
+                float pageDetectorWidth = page2.getOrig_image().cols();
+                float proportionMapping = pageDetectorWidth / onePageWidth;
+
+                List<Rectangle> speechBubblesRealXY = new ArrayList<>();
+                for (Rectangle bubble : speechBubbles) {
+                    speechBubblesRealXY.add(new Rectangle(
+                            (int) (bubble.getStartX() / proportionMapping),
+                            (int) (bubble.getStartY() / proportionMapping),
+                            (int) (bubble.getEndX() / proportionMapping),
+                            (int) (bubble.getEndY() / proportionMapping)));
+                }
 
                 threadHandler.post(new Runnable() {
                     @Override
@@ -324,6 +386,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                         mFindBubblesButton.setClickable(true);
                         page.setOrig_image(page2.getOrig_image());
                         page.setSpeech_bubbles(speechBubbles);
+                        translatedPages.put(pageIdx, speechBubblesRealXY);
                         Log.d("THREAD_TEST", "endUIThread");
                     }
                 });
@@ -333,7 +396,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
                 Bitmap bitmap = page2.image_with_speech_bubbles(3);
                 //TODO: wywalic to kiedys, teraz jest do testu tylko
-                MediaStore.Images.Media.insertImage(getContentResolver(), bitmap, "testowyObrazekRectangle8", "lolxd");
+                //MediaStore.Images.Media.insertImage(getContentResolver(), bitmap, "testowyObrazekRectangle8", "lolxd");
                 Log.d("THREAD_TEST", "endThread");
             } catch (Exception e) {
                 e.printStackTrace();
@@ -352,8 +415,15 @@ public class PdfViewerActivity extends AppCompatActivity{
                 //int width = DDpi / 72 * page.getWidth();
                 //int height = DDpi / 72 * page.getHeight();
 
-                int width = 3740;
-                int height = 4895;
+                //TODO:tutaj robic skale, najpierw znajac proporcje tej strony z PDFView
+                float onePageWidth = pdfView.getPageSize(pageIdx).getWidth();
+                float onePageHeight = pdfView.getPageSize(pageIdx).getHeight();
+                float wxhProportion = onePageWidth / onePageHeight;
+                int max_px = 17000000;
+                int width = (int) Math.floor(Math.sqrt(max_px * wxhProportion));
+                int height = (int) (width / wxhProportion);
+                Log.d("height and width", width + " x " + height);
+                Log.d("height * width", String.valueOf(width * height));
 
                 bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 
@@ -368,9 +438,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                 ex.printStackTrace();
             }
             return bitmap;
-
         }
-
     }
 
     private Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
@@ -382,9 +450,80 @@ public class PdfViewerActivity extends AppCompatActivity{
                 break;
             }
         }
-
         return resultRectangle;
     }
+
+
+    private class OnDrawListener implements com.github.barteksc.pdfviewer.listener.OnDrawListener {
+        @Override
+        public void onLayerDrawn(Canvas canvas, float pageWidth, float pageHeight, int displayedPage) {
+            Paint paintBG = new Paint();
+            paintBG.setColor(Color.WHITE);
+            paintBG.setStrokeWidth(3);
+
+            Log.d("Rysowanie", String.valueOf(translatedPages.keySet()));
+            if(translatedPages.containsKey(pdfView.getCurrentPage())) {
+                for (Rectangle bubble : translatedPages.get(pdfView.getCurrentPage())) {
+                    Log.d("Bubble", String.valueOf(bubble));
+                    int startX = (int) (bubble.getStartX() * pdfView.getZoom());
+                    int startY = (int) (bubble.getStartY() * pdfView.getZoom());
+                    int endX = (int) (bubble.getEndX() * pdfView.getZoom());
+                    int endY = (int) (bubble.getEndY() * pdfView.getZoom());
+                    canvas.drawRect(startX, startY, endX, endY, paintBG);
+                }
+            }
+
+            int startX = (int) (236 * pdfView.getZoom());
+            int startY = (int) (282 * pdfView.getZoom());
+            int endX = (int) (546 * pdfView.getZoom());
+            int endY = (int) (487 * pdfView.getZoom());
+            Rectangle example_rectangle = new Rectangle(startX, startY, endX, endY);
+            example_rectangle.setText("OH, HEY... HOW'S YOUR MOM? XDDD XD XDDD XDDDDD XD");
+            //rectangle.updateOptSize()
+            canvas.drawRect(startX, startY, endX, endY, paintBG);
+
+            RectF rect = new RectF(startX, startY, endX, endY);
+            TextPaint textPaint = new TextPaint();
+            float fontSize = example_rectangle.getOptTextSize();
+            textPaint.setColor(Color.BLACK);
+            textPaint.setTextSize(fontSize);
+            StaticLayout sl = new StaticLayout(example_rectangle.getText(), textPaint,
+                    example_rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
+                    1, 1, false);
+            Log.d("TextHeight", String.valueOf(sl.getHeight()));
+            //canvas.save();
+            canvas.translate(rect.left, rect.top);
+            sl.draw(canvas);
+            //canvas.restore();
+
+            // Use Color.parseColor to define HTML colors
+        }
+    }
+
+    public class OnPageChangeListener implements com.github.barteksc.pdfviewer.listener.OnPageChangeListener {
+        @Override
+        public void onPageChanged(int page, int pageCount) {
+            if (page == 0) {
+                mPageLeftButton.setEnabled(false);
+                mPageLeftButton.setAlpha(.5f);
+                mPageLeftButton.setClickable(false);
+            } else {
+                mPageLeftButton.setEnabled(true);
+                mPageLeftButton.setAlpha(1f);
+                mPageLeftButton.setClickable(true);
+            }
+            if (page == (pageCount - 1)) {
+                mPageRightButton.setEnabled(false);
+                mPageRightButton.setAlpha(.5f);
+                mPageRightButton.setClickable(false);
+            } else {
+                mPageRightButton.setEnabled(true);
+                mPageRightButton.setAlpha(1f);
+                mPageRightButton.setClickable(true);
+            }
+        }
+    }
+
 
     private class onTapListener implements OnTapListener {
         @Override
@@ -394,6 +533,10 @@ public class PdfViewerActivity extends AppCompatActivity{
             //mappedX, mappedY = piksel CAŁEJ WSTĘGI PDFA, jezeli jest przyblizony, to wtedy przyblizonego
             //thisPageX, <mappedY> = piksel AKTUALNEJ STRONY, jezeli jest przyblizona, to wtedy przyblizonej
             //thisPageXRealScale, thisPageYRealScale = piksel AKTUALNEJ STRONY, jezeli jest przyblizona, to i tak zwraca normalne wymiary
+
+            if (cumXOffset.isEmpty()) {
+                this.updateCumXOffset();
+            }
 
             float x = e.getX();
             float y = e.getY();
@@ -423,7 +566,7 @@ public class PdfViewerActivity extends AppCompatActivity{
             float thisPageXRealScale = 0f;
             if (pageIdx != 0) {
                 //TODO: teraz uznaje, ze kazda strona ma ten sam width, zrobic liste z suma kulumowana i brac z tego zamaist page * onePageWidth
-                thisPageX = mappedX - pageIdx * onePageWidth * pdfView.getZoom();
+                thisPageX = mappedX - cumXOffset.get(pageIdx-1) * pdfView.getZoom();
             } else {
                 thisPageX = mappedX;
             }
@@ -457,6 +600,20 @@ public class PdfViewerActivity extends AppCompatActivity{
 
             //Log.d("ONTAPTEST", "Page[0] = " + pdfView.getPageSize(0) + " | Page[1] = " + pdfView.getPageSize(1) + " | Page[2] = " + pdfView.getPageSize(2));
             return false;
+        }
+
+        public void updateCumXOffset() {
+
+            if (pdfView.getPageCount() == 0) {
+                return;
+            }
+
+            cumXOffset.add((int) pdfView.getPageSize(0).getWidth());
+
+            for (int i = 1; i < pdfView.getPageCount(); i++) {
+                cumXOffset.add(cumXOffset.get(i-1) + (int) pdfView.getPageSize(i).getWidth());
+            }
+            Log.d("TEST_CUMX", String.valueOf(cumXOffset));
         }
     }
 }
