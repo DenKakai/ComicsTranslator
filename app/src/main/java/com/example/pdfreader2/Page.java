@@ -271,8 +271,9 @@ public class Page {
             for (int j = i+1; j < num_of_beginning_rects; j++) {
                 Rectangle p1 = rectangles.get(i);
                 Rectangle p2 = rectangles.get(j);
-                //TODO: to 20 zmienic na jakos wyliczone automatycznie i inne dla W inne dla H xD
-                if (p1.isOverlappingOrNear(p2, 10, 10)) {
+                int w = this.orig_image.cols();
+                int h = this.orig_image.rows();
+                if (p1.isOverlappingOrNear(p2, w/400, h/400)) {
                     int min_cluster = Math.min(rectangle_cluster.get(i), rectangle_cluster.get(j));
                     int max_cluster = Math.max(rectangle_cluster.get(i), rectangle_cluster.get(j));
                     if (min_cluster == max_cluster) {

@@ -4,6 +4,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.viewpager.widget.ViewPager;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -40,6 +41,7 @@ import android.os.Process;
 import com.github.barteksc.pdfviewer.PDFView;
 import com.github.barteksc.pdfviewer.listener.Callbacks;
 import com.github.barteksc.pdfviewer.listener.OnDrawListener;
+import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
 import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
@@ -105,6 +107,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                 .pageSnap(true)
                 .autoSpacing(true)
                 .pageFling(true)
+                .onPageChange(new OnPageChangeListener())
                 .load();
 
         pdfView.setMidZoom(2f);
@@ -135,7 +138,6 @@ public class PdfViewerActivity extends AppCompatActivity{
         Log.d("TEST_BITMAPY", String.valueOf(page.getSpeech_bubbles()));**/
 
 
-        //TODO: Do kazdego guzika zrobic wyszarzanie, kiedy ma nie byc mozliwa akcja
         //TODO: Naprawic zoomout by na np. 172% zooma spadlo do 100%
 
 
@@ -417,8 +419,11 @@ public class PdfViewerActivity extends AppCompatActivity{
                 float onePageWidth = pdfView.getPageSize(pageIdx).getWidth();
                 float onePageHeight = pdfView.getPageSize(pageIdx).getHeight();
                 float wxhProportion = onePageWidth / onePageHeight;
-                int width = 3000;
+                int max_px = 17000000;
+                int width = (int) Math.floor(Math.sqrt(max_px * wxhProportion));
                 int height = (int) (width / wxhProportion);
+                Log.d("height and width", width + " x " + height);
+                Log.d("height * width", String.valueOf(width * height));
 
                 bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 
@@ -433,9 +438,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                 ex.printStackTrace();
             }
             return bitmap;
-
         }
-
     }
 
     private Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
@@ -450,16 +453,6 @@ public class PdfViewerActivity extends AppCompatActivity{
         return resultRectangle;
     }
 
-
-    //TODO: raczej do wywalenia
-/*    private class OnPageScrollListener implements com.github.barteksc.pdfviewer.listener.OnPageScrollListener {
-        @Override
-        public void onPageScrolled(int page, float positionOffset) {
-            Log.d("Scroll", "Lis jest mega fajny serio");
-        }
-    }
-
- */
 
     private class OnDrawListener implements com.github.barteksc.pdfviewer.listener.OnDrawListener {
         @Override
@@ -504,6 +497,30 @@ public class PdfViewerActivity extends AppCompatActivity{
             //canvas.restore();
 
             // Use Color.parseColor to define HTML colors
+        }
+    }
+
+    public class OnPageChangeListener implements com.github.barteksc.pdfviewer.listener.OnPageChangeListener {
+        @Override
+        public void onPageChanged(int page, int pageCount) {
+            if (page == 0) {
+                mPageLeftButton.setEnabled(false);
+                mPageLeftButton.setAlpha(.5f);
+                mPageLeftButton.setClickable(false);
+            } else {
+                mPageLeftButton.setEnabled(true);
+                mPageLeftButton.setAlpha(1f);
+                mPageLeftButton.setClickable(true);
+            }
+            if (page == (pageCount - 1)) {
+                mPageRightButton.setEnabled(false);
+                mPageRightButton.setAlpha(.5f);
+                mPageRightButton.setClickable(false);
+            } else {
+                mPageRightButton.setEnabled(true);
+                mPageRightButton.setAlpha(1f);
+                mPageRightButton.setClickable(true);
+            }
         }
     }
 
