@@ -17,6 +17,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PointF;
+import android.graphics.RectF;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
 import android.os.Bundle;
@@ -26,6 +27,9 @@ import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -87,7 +91,7 @@ public class PdfViewerActivity extends AppCompatActivity{
         pdfView.fromFile(file)
                 .onTap(new onTapListener())
                 .onDraw(new OnDrawListener())
-                .onPageScroll(new OnPageScrollListener())
+                //.onPageScroll(new OnPageScrollListener())
                 .fitEachPage(true)
                 .pageFitPolicy(FitPolicy.HEIGHT)
                 .swipeHorizontal(true)
@@ -194,6 +198,13 @@ public class PdfViewerActivity extends AppCompatActivity{
         BubblesDetector bubblesDetector = new BubblesDetector(pathEast);
         Log.d("THREAD_TEST", "endOfEast");
 
+        Log.d("THREAD_TEST", "startOfANN");
+        String pathAnn = getPath("ANN_BubbleClassifier.yml", this);
+        BubblesClassifier bubblesClassifier = new BubblesClassifier(pathAnn);
+        Log.d("THREAD_TEST", "endOfANN");
+
+
+
         mFindBubblesButton = (Button) findViewById(R.id.findBubbles);
         mFindBubblesButton.setOnClickListener(new View.OnClickListener() {
 
@@ -202,7 +213,8 @@ public class PdfViewerActivity extends AppCompatActivity{
                 //mFindBubblesButton.setEnabled(false);
                 page = new Page();
                 int DDpi = getResources().getDisplayMetrics().densityDpi;
-                ExampleRunnable runnable = new ExampleRunnable(DDpi, file, pdfView.getCurrentPage(), page, bubblesDetector);
+                ExampleRunnable runnable = new ExampleRunnable(DDpi, file, pdfView.getCurrentPage(),
+                        page, bubblesDetector);
                 new Thread(runnable).start();
             }
         });
@@ -393,25 +405,56 @@ public class PdfViewerActivity extends AppCompatActivity{
         return resultRectangle;
     }
 
-    private class OnPageScrollListener implements com.github.barteksc.pdfviewer.listener.OnPageScrollListener {
+    //TODO: raczej do wywalenia
+/*    private class OnPageScrollListener implements com.github.barteksc.pdfviewer.listener.OnPageScrollListener {
         @Override
         public void onPageScrolled(int page, float positionOffset) {
             Log.d("Scroll", "Lis jest mega fajny serio");
         }
     }
 
+ */
+
     private class OnDrawListener implements com.github.barteksc.pdfviewer.listener.OnDrawListener {
         @Override
         public void onLayerDrawn(Canvas canvas, float pageWidth, float pageHeight, int displayedPage) {
-            int x=400;
-            int y=400;
-            int radius=40;
-            Paint paint=new Paint();
+            int x = (int)(400.0f * pdfView.getZoom());
+            int y = (int)(400.0f * pdfView.getZoom());
+            int radius = 40;
+
+            int startX = (int) (236 * pdfView.getZoom());
+            int startY = (int) (282 * pdfView.getZoom());
+            int endX = (int) (546* pdfView.getZoom());
+            int endY = (int) (487* pdfView.getZoom());
+            Rectangle example_rectangle = new Rectangle(startX, startY, endX, endY);
+            example_rectangle.setText("OH, HEY... HOW'S YOUR MOM? XDDD XD XDDD XDDDDD XD");
+
+            Paint paint = new Paint();
+            paint.setColor(Color.WHITE);
+            paint.setStrokeWidth(3);
+            canvas.drawRect(startX, startY, endX, endY, paint);
+
+            RectF rect = new RectF(startX, startY, endX, endY);
+            TextPaint textPaint = new TextPaint();
+            float fontSize = example_rectangle.getOptTextSize() * pdfView.getZoom();
+            textPaint.setColor(Color.BLACK);
+            textPaint.setTextSize(fontSize);
+            StaticLayout sl = new StaticLayout(example_rectangle.getText(), textPaint,
+                    example_rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
+                    1, 1, false);
+            Log.d("TextHeight", String.valueOf(sl.getHeight()));
+            //canvas.save();
+            canvas.translate(rect.left, rect.top);
+            sl.draw(canvas);
+            //canvas.restore();
+
             // Use Color.parseColor to define HTML colors
             paint.setColor(Color.parseColor("#CD5C5C"));
             canvas.drawCircle(x, y, radius, paint);
+            Log.d("Rys", "XD");
         }
     }
+
 
     private class onTapListener implements OnTapListener {
         @Override

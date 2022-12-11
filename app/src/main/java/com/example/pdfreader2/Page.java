@@ -9,10 +9,11 @@ import org.opencv.dnn.Dnn;
 import org.opencv.dnn.Net;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.ml.ANN_MLP;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -71,8 +72,7 @@ public class Page {
 
     public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
                                         BubblesDetector bubblesDetector) {
-        //TODO: zmienilismy z 0.2 na 0.0, bo cos zle wykrywa chmurki pikselowo
-        return generate_speech_bubbles(min_confidence, scale, bubblesDetector, 0.0);
+        return generate_speech_bubbles(min_confidence, scale, bubblesDetector, 0.2);
     }
 
     public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
@@ -82,25 +82,15 @@ public class Page {
         int bigger_frame_Wpx = (int)(percentage_bigger_frames / 100 * W);
         int bigger_frame_Hpx = (int)(percentage_bigger_frames / 100 * H);
         return generate_speech_bubbles(min_confidence, scale, bubblesDetector,
-                bigger_frame_Wpx, bigger_frame_Hpx);
+                bigger_frame_Wpx, bigger_frame_Hpx, true, null);
     }
 
 
-    //TODO: Jakas inna do tego robienia
-    /**public BufferedImage Mat2BufferedImage(int bubble_idx)throws IOException {
-        Mat image = new Mat();
-        this.orig_image.copyTo(image);
-        Rectangle speech_bubble = this.getSpeech_bubbles().get(bubble_idx);
-        Mat croppedMat = image.submat(speech_bubble.getStartY(), speech_bubble.getEndY(),
-                speech_bubble.getStartX(), speech_bubble.getEndX());
-        MatOfByte mob = new MatOfByte();
-        Imgcodecs.imencode(".jpg", croppedMat, mob);
-        return ImageIO.read(new ByteArrayInputStream(mob.toArray()));
-    }*/
-
     public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
-                                        BubblesDetector bubblesDetector, int bigger_frame_Wpx,
-                                        int bigger_frame_Hpx) {
+                                                   BubblesDetector bubblesDetector,
+                                                   int bigger_frame_Wpx, int bigger_frame_Hpx,
+                                                   boolean use_classifier,
+                                                   BubblesClassifier bubblesClassifier) {
         Mat image = new Mat();
         this.orig_image.copyTo(image);
         int W = image.cols();
@@ -172,11 +162,55 @@ public class Page {
             rect.setStartY((int)(rect.getStartY() * rH));
             rect.setEndY((int)(rect.getEndY() * rH));
         }
-        return makeBiggerRectangles(rects, bigger_frame_Wpx, bigger_frame_Hpx);
+        return makeBiggerRectangles(rects, bigger_frame_Wpx, bigger_frame_Hpx,
+                use_classifier, bubblesClassifier);
     }
 
     public void save_with_speech_bubbles(String output_path) {
         save_with_speech_bubbles(output_path, 3);
+    }
+
+    public List<Rectangle> remove_classified_as_not_bubbles(BubblesClassifier bubblesClassifier,
+                                                            List<Rectangle> bubbles_to_classify) {
+        // making copy of bubbles_to_classify
+        List<Rectangle> bubbles_copy = new ArrayList<>();
+        for (Rectangle rectangle: bubbles_to_classify) {
+            bubbles_copy.add(new Rectangle(rectangle.getStartX(),
+                    rectangle.getStartY(), rectangle.getEndX(), rectangle.getEndY()));
+        }
+        ANN_MLP ANN = bubblesClassifier.getANN();
+        Mat image = new Mat();
+        List<Rectangle> not_bubbles = new ArrayList<>();
+        this.orig_image.copyTo(image);
+        Mat datasetHist = new Mat();
+        for (Rectangle speech_bubble : bubbles_copy) {
+            Mat croppedMat = image.submat(speech_bubble.getStartY(), speech_bubble.getEndY(),
+                    speech_bubble.getStartX(), speech_bubble.getEndX());
+            Mat imgHSV = new Mat();
+            Imgproc.cvtColor(croppedMat, imgHSV, Imgproc.COLOR_BGR2HSV);
+            MatOfInt selectedChannels = new MatOfInt(0);
+            Mat imgHist = new Mat();
+            MatOfInt histSize = new MatOfInt(180);
+            MatOfFloat ranges = new MatOfFloat(0f, 180f);
+            Imgproc.calcHist(Collections.singletonList(imgHSV), selectedChannels, new Mat(),
+                    imgHist, histSize, ranges);
+            imgHist = imgHist.t();
+            datasetHist.push_back(imgHist);
+        }
+        datasetHist.convertTo(datasetHist, CvType.CV_32F);
+        for (int i = 0; i < datasetHist.rows(); i++) {
+            Mat sample = datasetHist.row(i);
+            Mat results = new Mat();
+            ANN.predict(sample, results, 0);
+
+            double response = results.get(0, 0)[0];
+            int predicted_label = (int) Math.round(response);
+            if (predicted_label == 1) {
+                not_bubbles.add(bubbles_copy.get(i));
+            }
+        }
+        bubbles_copy.removeAll(not_bubbles);
+        return bubbles_copy;
     }
 
     public void save_with_speech_bubbles(String output_path, int thickness) {
@@ -210,8 +244,10 @@ public class Page {
         return bitmap;
     }
 
-    private static List<Rectangle> makeBiggerRectangles(List<Rectangle> rectangles,
-                                                            int Wpx_more, int Hpx_more) {
+    private List<Rectangle> makeBiggerRectangles(List<Rectangle> rectangles,
+                                                 int Wpx_more, int Hpx_more,
+                                                 boolean use_classifier,
+                                                 BubblesClassifier bubblesClassifier) {
         if (rectangles.size() == 0) {
             return rectangles;
         }
@@ -296,6 +332,10 @@ public class Page {
             rect.setStartY(rect.getStartY() - Hpx_more);
             rect.setEndX(rect.getEndX() + Wpx_more);
             rect.setEndY(rect.getEndY() + Hpx_more);
+        }
+
+        if (use_classifier) {
+            bigger_rectangles = this.remove_classified_as_not_bubbles(bubblesClassifier, bigger_rectangles);
         }
 
         return bigger_rectangles;
