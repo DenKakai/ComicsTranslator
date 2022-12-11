@@ -30,42 +30,42 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Zoom In" />
+                android:text="Zoom I" />
 
             <Button
                 android:id="@+id/zoomOut"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Zoom Out" />
+                android:text="Zoom O" />
 
             <Button
                 android:id="@+id/pageLeft"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Page Left" />
+                android:text="Page L" />
 
             <Button
                 android:id="@+id/pageRight"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Page Right" />
+                android:text="Page R" />
 
             <Button
                 android:id="@+id/findBubbles"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Find Bubbles" />
+                android:text="Find Bub" />
 
             <Button
-                android:id="@+id/logBubbles"
+                android:id="@+id/clearBubbles"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Log Bubbles" />
+                android:text="Clr Bub" />
 
         </LinearLayout>
 
