@@ -78,6 +78,7 @@ public class PdfViewerActivity extends AppCompatActivity{
     private Page page;
     private ArrayList<Bitmap> pdfAsListOfBitmaps;
     private Handler mainHandler = new Handler();
+    private List<Integer> cumXOffset = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,6 +102,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                 .load();
 
         pdfView.setMidZoom(2f);
+
 
 
         /*pdfAsListOfBitmaps = pdfToBitmap(file);
@@ -214,7 +216,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                 page = new Page();
                 int DDpi = getResources().getDisplayMetrics().densityDpi;
                 ExampleRunnable runnable = new ExampleRunnable(DDpi, file, pdfView.getCurrentPage(),
-                        page, bubblesDetector);
+                        page, bubblesDetector, bubblesClassifier);
                 new Thread(runnable).start();
             }
         });
@@ -230,6 +232,8 @@ public class PdfViewerActivity extends AppCompatActivity{
             }
         });
     }
+
+
 
     //zmiana pdfa na liste bitmap
     private ArrayList<Bitmap> pdfToBitmap(File pdfFile) {
@@ -295,15 +299,18 @@ public class PdfViewerActivity extends AppCompatActivity{
         int pageIdx;
         Page page;
         BubblesDetector bubblesDetector;
+        BubblesClassifier bubblesClassifier;
 
         Bitmap pdfPageAsBitmap;
 
-        ExampleRunnable(int DDpi, File file, int pageIdx, Page page, BubblesDetector bubblesDetector) {
+        ExampleRunnable(int DDpi, File file, int pageIdx, Page page,
+                        BubblesDetector bubblesDetector, BubblesClassifier bubblesClassifier) {
             this.DDpi = DDpi;
             this.file = file;
             this.pageIdx = pageIdx;
             this.page = page;
             this.bubblesDetector = bubblesDetector;
+            this.bubblesClassifier = bubblesClassifier;
         }
 
         @Override
@@ -329,7 +336,9 @@ public class PdfViewerActivity extends AppCompatActivity{
                 Log.d("THREAD_TEST", "startGenerateSpeechBubblesThread");
                 Page page2 = new Page(pdfPageAsBitmap);
                 List<Rectangle> speechBubbles;
-                speechBubbles = page2.generate_speech_bubbles(0.5, 0.35, bubblesDetector);
+                speechBubbles = page2.generate_speech_bubbles(0.5, 0.8,
+                        bubblesDetector, 0.2,
+                        true, bubblesClassifier);
                 page2.setSpeech_bubbles(speechBubbles);
                 Log.d("THREAD_TEST", "endGenerateSpeechBubblesThread" + speechBubbles.toArray().length + speechBubbles);
 
@@ -401,9 +410,9 @@ public class PdfViewerActivity extends AppCompatActivity{
                 break;
             }
         }
-
         return resultRectangle;
     }
+
 
     //TODO: raczej do wywalenia
 /*    private class OnPageScrollListener implements com.github.barteksc.pdfviewer.listener.OnPageScrollListener {
@@ -424,8 +433,8 @@ public class PdfViewerActivity extends AppCompatActivity{
 
             int startX = (int) (236 * pdfView.getZoom());
             int startY = (int) (282 * pdfView.getZoom());
-            int endX = (int) (546* pdfView.getZoom());
-            int endY = (int) (487* pdfView.getZoom());
+            int endX = (int) (546 * pdfView.getZoom());
+            int endY = (int) (487 * pdfView.getZoom());
             Rectangle example_rectangle = new Rectangle(startX, startY, endX, endY);
             example_rectangle.setText("OH, HEY... HOW'S YOUR MOM? XDDD XD XDDD XDDDDD XD");
 
@@ -436,7 +445,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
             RectF rect = new RectF(startX, startY, endX, endY);
             TextPaint textPaint = new TextPaint();
-            float fontSize = example_rectangle.getOptTextSize() * pdfView.getZoom();
+            float fontSize = example_rectangle.getOptTextSize();
             textPaint.setColor(Color.BLACK);
             textPaint.setTextSize(fontSize);
             StaticLayout sl = new StaticLayout(example_rectangle.getText(), textPaint,
@@ -464,6 +473,10 @@ public class PdfViewerActivity extends AppCompatActivity{
             //mappedX, mappedY = piksel CAŁEJ WSTĘGI PDFA, jezeli jest przyblizony, to wtedy przyblizonego
             //thisPageX, <mappedY> = piksel AKTUALNEJ STRONY, jezeli jest przyblizona, to wtedy przyblizonej
             //thisPageXRealScale, thisPageYRealScale = piksel AKTUALNEJ STRONY, jezeli jest przyblizona, to i tak zwraca normalne wymiary
+
+            if (cumXOffset.isEmpty()) {
+                this.updateCumXOffset();
+            }
 
             float x = e.getX();
             float y = e.getY();
@@ -493,7 +506,7 @@ public class PdfViewerActivity extends AppCompatActivity{
             float thisPageXRealScale = 0f;
             if (pageIdx != 0) {
                 //TODO: teraz uznaje, ze kazda strona ma ten sam width, zrobic liste z suma kulumowana i brac z tego zamaist page * onePageWidth
-                thisPageX = mappedX - pageIdx * onePageWidth * pdfView.getZoom();
+                thisPageX = mappedX - cumXOffset.get(pageIdx-1) * pdfView.getZoom();
             } else {
                 thisPageX = mappedX;
             }
@@ -527,6 +540,20 @@ public class PdfViewerActivity extends AppCompatActivity{
 
             //Log.d("ONTAPTEST", "Page[0] = " + pdfView.getPageSize(0) + " | Page[1] = " + pdfView.getPageSize(1) + " | Page[2] = " + pdfView.getPageSize(2));
             return false;
+        }
+
+        public void updateCumXOffset() {
+
+            if (pdfView.getPageCount() == 0) {
+                return;
+            }
+
+            cumXOffset.add((int) pdfView.getPageSize(0).getWidth());
+
+            for (int i = 1; i < pdfView.getPageCount(); i++) {
+                cumXOffset.add(cumXOffset.get(i-1) + (int) pdfView.getPageSize(i).getWidth());
+            }
+            Log.d("TEST_CUMX", String.valueOf(cumXOffset));
         }
     }
 }

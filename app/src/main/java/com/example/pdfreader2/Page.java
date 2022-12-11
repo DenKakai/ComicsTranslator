@@ -82,7 +82,20 @@ public class Page {
         int bigger_frame_Wpx = (int)(percentage_bigger_frames / 100 * W);
         int bigger_frame_Hpx = (int)(percentage_bigger_frames / 100 * H);
         return generate_speech_bubbles(min_confidence, scale, bubblesDetector,
-                bigger_frame_Wpx, bigger_frame_Hpx, true, null);
+                bigger_frame_Wpx, bigger_frame_Hpx, false, null);
+    }
+
+    public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
+                                                   BubblesDetector bubblesDetector,
+                                                   double percentage_bigger_frames,
+                                                   boolean use_classifier,
+                                                   BubblesClassifier bubblesClassifier) {
+        int W = this.orig_image.cols();
+        int H = this.orig_image.rows();
+        int bigger_frame_Wpx = (int)(percentage_bigger_frames / 100 * W);
+        int bigger_frame_Hpx = (int)(percentage_bigger_frames / 100 * H);
+        return generate_speech_bubbles(min_confidence, scale, bubblesDetector,
+                bigger_frame_Wpx, bigger_frame_Hpx, use_classifier, bubblesClassifier);
     }
 
 
