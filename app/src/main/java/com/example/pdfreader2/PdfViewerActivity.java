@@ -468,7 +468,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                 float onePageWidth = pdfView.getPageSize(pageIdx).getWidth();
                 float onePageHeight = pdfView.getPageSize(pageIdx).getHeight();
                 float wxhProportion = onePageWidth / onePageHeight;
-                int max_px = 17000000;
+                int max_px = 13500000;
                 int width = (int) Math.floor(Math.sqrt(max_px * wxhProportion));
                 int height = (int) (width / wxhProportion);
                 Log.d("height and width", width + " x " + height);
