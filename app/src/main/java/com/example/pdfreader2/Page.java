@@ -193,23 +193,32 @@ public class Page {
         }
         ANN_MLP ANN = bubblesClassifier.getANN();
         Mat image = new Mat();
+        List<Rectangle> bubbles_to_del = new ArrayList<>();
         List<Rectangle> not_bubbles = new ArrayList<>();
         this.orig_image.copyTo(image);
         Mat datasetHist = new Mat();
-        for (Rectangle speech_bubble : bubbles_copy) {
-            Mat croppedMat = image.submat(speech_bubble.getStartY(), speech_bubble.getEndY(),
-                    speech_bubble.getStartX(), speech_bubble.getEndX());
-            Mat imgHSV = new Mat();
-            Imgproc.cvtColor(croppedMat, imgHSV, Imgproc.COLOR_BGR2HSV);
-            MatOfInt selectedChannels = new MatOfInt(0);
-            Mat imgHist = new Mat();
-            MatOfInt histSize = new MatOfInt(180);
-            MatOfFloat ranges = new MatOfFloat(0f, 180f);
-            Imgproc.calcHist(Collections.singletonList(imgHSV), selectedChannels, new Mat(),
-                    imgHist, histSize, ranges);
-            imgHist = imgHist.t();
-            datasetHist.push_back(imgHist);
+
+        for (int i = 0; i < bubbles_copy.size(); i ++) {
+            Rectangle speech_bubble = bubbles_copy.get(i);
+            try {
+                Mat croppedMat = image.submat(speech_bubble.getStartY(), speech_bubble.getEndY(),
+                        speech_bubble.getStartX(), speech_bubble.getEndX());
+                Mat imgHSV = new Mat();
+                Imgproc.cvtColor(croppedMat, imgHSV, Imgproc.COLOR_BGR2HSV);
+                MatOfInt selectedChannels = new MatOfInt(0);
+                Mat imgHist = new Mat();
+                MatOfInt histSize = new MatOfInt(180);
+                MatOfFloat ranges = new MatOfFloat(0f, 180f);
+                Imgproc.calcHist(Collections.singletonList(imgHSV), selectedChannels, new Mat(),
+                        imgHist, histSize, ranges);
+                imgHist = imgHist.t();
+                datasetHist.push_back(imgHist);
+            } catch (Exception e) {
+                bubbles_to_del.add(speech_bubble);
+            }
         }
+        bubbles_copy.removeAll(bubbles_to_del);
+
         datasetHist.convertTo(datasetHist, CvType.CV_32F);
         for (int i = 0; i < datasetHist.rows(); i++) {
             Mat sample = datasetHist.row(i);

@@ -565,7 +565,6 @@ public class PdfViewerActivity extends AppCompatActivity{
             float thisPageX = 0f;
             float thisPageXRealScale = 0f;
             if (pageIdx != 0) {
-                //TODO: teraz uznaje, ze kazda strona ma ten sam width, zrobic liste z suma kulumowana i brac z tego zamaist page * onePageWidth
                 thisPageX = mappedX - cumXOffset.get(pageIdx-1) * pdfView.getZoom();
             } else {
                 thisPageX = mappedX;
