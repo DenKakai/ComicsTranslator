@@ -397,7 +397,7 @@ public class PdfViewerActivity extends AppCompatActivity{
         }
     }
 
-    private Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
+    public static Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
         Rectangle resultRectangle = null;
 
         for (Rectangle rectangle : rectangles) {
