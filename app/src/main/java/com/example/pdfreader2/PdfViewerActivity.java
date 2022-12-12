@@ -400,16 +400,15 @@ public class PdfViewerActivity extends AppCompatActivity{
     class TranslatorRunnable implements Runnable {
         String text;
         String translateResult;
-        WordCheck w;
 
-        public TranslatorRunnable(String text, WordCheck w) {
+        public TranslatorRunnable(String text) {
             this.text = text;
-            this.w = w;
         }
 
         public void setText(String text) {
             this.text = text;
         }
+
 
         public String getTranslateResult() {
             return translateResult;
@@ -425,13 +424,6 @@ public class PdfViewerActivity extends AppCompatActivity{
                 countDownLatch.await();
                 String tlum = w2.getTest();
                 Log.d("tlum", tlum);
-                Handler threadHandler = new Handler(Looper.getMainLooper());
-                threadHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        w.setTest(tlum);
-                    }
-                });
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -573,9 +565,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
 
                     // tlumaczenie, narazie nie dziala
-                    WordCheck w = new WordCheck();
-
-                    TranslatorRunnable translatorRunnable = new TranslatorRunnable(text2, w);
+                    TranslatorRunnable translatorRunnable = new TranslatorRunnable(text2);
                     translatorRunnable.run();
 
                 }
