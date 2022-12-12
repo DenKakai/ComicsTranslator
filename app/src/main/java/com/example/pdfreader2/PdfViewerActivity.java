@@ -342,32 +342,6 @@ public class PdfViewerActivity extends AppCompatActivity{
 
                         Log.d("TESTTESSERACT", "startSciezki");
 
-//                        String pathTesseract = getPathTess("eng.traineddata", getContext());
-//                        Log.d("TESTTESSERACT", pathTesseract);
-//
-//
-//                        Log.d("TESTTESSERACT", "StartInicjalizacji");
-//                        TessBaseAPI tess = new TessBaseAPI();
-//
-//                        if (!tess.init(pathTesseract, "com+eng")) {
-//                            Log.d("TESTTESSERACT", "wyjebal sie");
-//                            // Error initializing Tesseract (wrong data path or language)
-//                            tess.recycle();
-//                            return;
-//                        }
-//
-//                        Log.d("TESTTESSERACT", "koniec");
-//
-//                        String pathTestImage = getPath("39.png", getContext());
-//
-//                        File image = new File(getContext().getFilesDir(), "39.png");
-//                        tess.setImage(image);
-//                        String text = tess.getUTF8Text();
-//                        Log.d("testOcr", text);
-//
-//                        String text2 = WordCheck.removeSingleChars(text);
-//                        Log.d("testOcr2", text2);
-
 
                     }   
                 });
@@ -455,6 +429,10 @@ public class PdfViewerActivity extends AppCompatActivity{
 
         return bitmap;
     }
+
+
+
+
 
     private class onTapListener implements OnTapListener {
         @Override
@@ -545,12 +523,10 @@ public class PdfViewerActivity extends AppCompatActivity{
                     Log.d("Bez znakow", text2);
 
 
-                    //tłumaczenie nie działa narazie
-                    String text3 = WordCheck.translate("en", "pl", text2);
-                    Log.d("tlumaczenie", text3);
 
-
-
+                    // tlumaczenie, narazie nie dziala
+                    Translator translator = new Translator();
+                    translator.run(text2);
 
 
                 }
