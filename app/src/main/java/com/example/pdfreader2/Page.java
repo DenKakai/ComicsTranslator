@@ -1,17 +1,17 @@
 package com.example.pdfreader2;
 
 import android.graphics.Bitmap;
-import android.util.Log;
 
 import org.opencv.android.Utils;
-import org.opencv.core.*;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.dnn.Dnn;
 import org.opencv.dnn.Net;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +30,7 @@ public class Page {
     public void setSpeech_bubbles(List<Rectangle> speech_bubbles) {
         this.speech_bubbles = speech_bubbles;
     }
+
 
     public Page(Bitmap bmp) {
         Mat mat = new Mat();

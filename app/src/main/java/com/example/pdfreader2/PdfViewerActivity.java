@@ -1,58 +1,37 @@
 package com.example.pdfreader2;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
-import android.graphics.PointF;
 import android.graphics.pdf.PdfRenderer;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
-import android.provider.MediaStore;
-import android.provider.Settings;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
-import android.os.Process;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.github.barteksc.pdfviewer.PDFView;
-import com.github.barteksc.pdfviewer.listener.Callbacks;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
-import com.shockwave.pdfium.util.SizeF;
-
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
+import com.googlecode.tesseract.android.TessBaseAPI;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
-import org.opencv.core.Rect;
-import org.opencv.imgproc.Imgproc;
 
-//TODO: dodalem nowa klase, ktora jest identyczna jak PdfFile, tylko zmienilem package. Trzeba sprawdzic czy to dziala.
-import com.github.barteksc.pdfviewer.PDFView;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
 
 public class PdfViewerActivity extends AppCompatActivity{
 
@@ -270,6 +249,37 @@ public class PdfViewerActivity extends AppCompatActivity{
         return "";
     }
 
+    // Upload file to storage and return a path.
+    private static String getPathTess(String file, Context context) {
+        AssetManager assetManager = context.getAssets();
+        BufferedInputStream inputStream = null;
+        try {
+            // Read data from assets.
+            inputStream = new BufferedInputStream(assetManager.open(file));
+            byte[] data = new byte[inputStream.available()];
+            inputStream.read(data);
+            inputStream.close();
+            // Create copy file in storage.
+            Log.d("testPlikuTesss", context.getFilesDir() + "/tessdata");
+            //TODO: sprawdzi czy mkdir jest konieczny, moze samo outFile wystarczy a jak nie, to dodac ifa na sprawdzanie czy ten folder istnieje
+            new File(context.getFilesDir() + "/tessdata").mkdirs();
+            File outFile = new File(context.getFilesDir() + "/tessdata", file);
+            FileOutputStream os = new FileOutputStream(outFile);
+            os.write(data);
+            os.close();
+            // Return a path to file which may be read in common way.
+            return context.getFilesDir().getAbsolutePath();
+        } catch (IOException ex) {
+            Log.i("TAG", "Failed to upload a file");
+        }
+        return "";
+    }
+
+    private Context getContext() {
+        return this;
+    }
+
+
     class ExampleRunnable implements Runnable {
         int DDpi;
         File file;
@@ -279,12 +289,16 @@ public class PdfViewerActivity extends AppCompatActivity{
 
         Bitmap pdfPageAsBitmap;
 
+
+
         ExampleRunnable(int DDpi, File file, int pageIdx, Page page, BubblesDetector bubblesDetector) {
             this.DDpi = DDpi;
             this.file = file;
             this.pageIdx = pageIdx;
             this.page = page;
             this.bubblesDetector = bubblesDetector;
+
+
         }
 
         @Override
@@ -325,15 +339,45 @@ public class PdfViewerActivity extends AppCompatActivity{
                         page.setOrig_image(page2.getOrig_image());
                         page.setSpeech_bubbles(speechBubbles);
                         Log.d("THREAD_TEST", "endUIThread");
-                    }
+
+                        Log.d("TESTTESSERACT", "startSciezki");
+
+//                        String pathTesseract = getPathTess("eng.traineddata", getContext());
+//                        Log.d("TESTTESSERACT", pathTesseract);
+//
+//
+//                        Log.d("TESTTESSERACT", "StartInicjalizacji");
+//                        TessBaseAPI tess = new TessBaseAPI();
+//
+//                        if (!tess.init(pathTesseract, "com+eng")) {
+//                            Log.d("TESTTESSERACT", "wyjebal sie");
+//                            // Error initializing Tesseract (wrong data path or language)
+//                            tess.recycle();
+//                            return;
+//                        }
+//
+//                        Log.d("TESTTESSERACT", "koniec");
+//
+//                        String pathTestImage = getPath("39.png", getContext());
+//
+//                        File image = new File(getContext().getFilesDir(), "39.png");
+//                        tess.setImage(image);
+//                        String text = tess.getUTF8Text();
+//                        Log.d("testOcr", text);
+//
+//                        String text2 = WordCheck.removeSingleChars(text);
+//                        Log.d("testOcr2", text2);
+
+
+                    }   
                 });
 
                 //Page page2 = new Page(pdfPageAsBitmap);
                 //page2.setSpeech_bubbles(speechBubbles);
 
-                Bitmap bitmap = page2.image_with_speech_bubbles(3);
+        //        Bitmap bitmap = page2.image_with_speech_bubbles(3);
                 //TODO: wywalic to kiedys, teraz jest do testu tylko
-                MediaStore.Images.Media.insertImage(getContentResolver(), bitmap, "testowyObrazekRectangle8", "lolxd");
+        //        MediaStore.Images.Media.insertImage(getContentResolver(), bitmap, "testowyObrazekRectangle8", "lolxd");
                 Log.d("THREAD_TEST", "endThread");
             } catch (Exception e) {
                 e.printStackTrace();
@@ -371,6 +415,9 @@ public class PdfViewerActivity extends AppCompatActivity{
 
         }
 
+
+
+
     }
 
     private Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
@@ -384,6 +431,29 @@ public class PdfViewerActivity extends AppCompatActivity{
         }
 
         return resultRectangle;
+    }
+
+    private Bitmap getTappedRectangleAsBitmap(Rectangle rectangle) {
+        int colStart = rectangle.getStartX();
+        int colEnd = rectangle.getEndX();
+        int rowStart = rectangle.getStartY();
+        int rowEnd = rectangle.getEndY();
+
+        Mat image = new Mat();
+        page.getOrig_image().copyTo(image);
+        Mat croppedMat = image.submat(rowStart, rowEnd, colStart, colEnd);
+        Bitmap bitmap = Bitmap.createBitmap(croppedMat.cols(), croppedMat.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(croppedMat, bitmap);
+
+        Log.d("zapis", "proba zapisu");
+        try (FileOutputStream out = new FileOutputStream("a")) {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Log.d("zapis", "udany");
+
+        return bitmap;
     }
 
     private class onTapListener implements OnTapListener {
@@ -450,7 +520,46 @@ public class PdfViewerActivity extends AppCompatActivity{
                 foundBubble.setStartY((int) (foundBubble.getStartY() / proportionMapping));
                 foundBubble.setEndX((int) (foundBubble.getEndX() / proportionMapping));
                 foundBubble.setEndY((int) (foundBubble.getEndY() / proportionMapping));*/
+
+                if (!Objects.isNull(foundBubble)) {
+//                    to razem robiliśmy
+                    Bitmap bitmap = getTappedRectangleAsBitmap(foundBubble);
+
+
+                    String pathTesseract = getPathTess("eng.traineddata", getContext());
+                    TessBaseAPI tess = new TessBaseAPI();
+
+                    if (!tess.init(pathTesseract, "com+eng")) {
+                        Log.d("TESTTESSERACT", "wyjebal sie");
+                        // Error initializing Tesseract (wrong data path or language)
+                        tess.recycle();
+                    }
+                    tess.setImage(bitmap);
+
+//                    efekt ocr
+                    String text = tess.getUTF8Text();
+                    Log.d("testOcr", text);
+
+//                    podstawowwe czyszczenie
+                    String text2 = WordCheck.removeSingleChars(text);
+                    Log.d("Bez znakow", text2);
+
+
+                    //tłumaczenie nie działa narazie
+                    String text3 = WordCheck.translate("en", "pl", text2);
+                    Log.d("tlumaczenie", text3);
+
+
+
+
+
+                }
+
+
+
+
                 Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
+
             } catch (Exception exception) {
                 Log.d("TESTWYKRYCIA", String.valueOf(exception));
             }
@@ -459,6 +568,12 @@ public class PdfViewerActivity extends AppCompatActivity{
             return false;
         }
     }
+
+
+
+
+
+
 }
 
 
