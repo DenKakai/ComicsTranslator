@@ -65,8 +65,6 @@ import org.opencv.core.MatOfByte;
 import org.opencv.core.Rect;
 import org.opencv.imgproc.Imgproc;
 
-//TODO: dodalem nowa klase, ktora jest identyczna jak PdfFile, tylko zmienilem package. Trzeba sprawdzic czy to dziala.
-import com.github.barteksc.pdfviewer.PDFView;
 
 public class PdfViewerActivity extends AppCompatActivity{
 
@@ -77,9 +75,6 @@ public class PdfViewerActivity extends AppCompatActivity{
     private Button mPageRightButton;
     private Button mFindBubblesButton;
     private Button mClearBubblesButton;
-
-    //TODO: do wywalenia
-    private Button mLogBubblesButton;
 
     private Page page;
     private ArrayList<Bitmap> pdfAsListOfBitmaps;
@@ -111,36 +106,9 @@ public class PdfViewerActivity extends AppCompatActivity{
                 .load();
 
         pdfView.setMidZoom(2f);
-        
-
-
-        /*pdfAsListOfBitmaps = pdfToBitmap(file);
-
-        Bitmap bmp = pdfAsListOfBitmaps.get(1);
-        Mat mat = new Mat();
-        Bitmap bmp32 = bmp.copy(Bitmap.Config.RGB_565, true);
-        Utils.bitmapToMat(bmp32, mat);
-
-        Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGRA2BGR);
-        //convertTo changes the depth/per_pixel_type, not the channel count.
-
-        Log.d("TEST_BITMAPY", "to dobre" + String.valueOf(mat));
-
-        Page page = new Page(mat);
-
-        String pathEast = getPath("frozen_east_text_detection.pb", this);
-        Log.d("TEST_BITMAPY", String.valueOf(pathEast));
-
-        BubblesDetector bubblesDetector = new BubblesDetector(pathEast);
-        Log.d("TEST_BITMAPY", String.valueOf(bubblesDetector));
-
-        page.generate_speech_bubbles(0.5, 0.05, bubblesDetector);
-        Log.d("TEST_BITMAPY", String.valueOf(page.getSpeech_bubbles()));**/
-
 
         //TODO: zoomout ma nie przecuac ekranu do dolnego lewego rogu, a zoomin ma nie przerzucac do gornego lewego rogu
         //TODO: po tym jak sie zrobi clearbubbles/findbubbles i sie dopisza do slownika, to nie wyswietlaja sie dopooki nie wykona sie jeszcze raz ondraw. trzeba to jakos wymusic
-
 
         //przyblizenie
         mZoomInButton = (Button) findViewById(R.id.zoomIn);
@@ -278,17 +246,6 @@ public class PdfViewerActivity extends AppCompatActivity{
             }
         });
 
-        //log dymkow
-
-        /*mLogBubblesButton = (Button) findViewById(R.id.logBubbles);
-        mLogBubblesButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                Log.d("TESTWYKRYCIA", String.valueOf(page.getSpeech_bubbles()));
-            }
-        });*/
-
         //czyszczenie chmurek
 
         mClearBubblesButton = (Button) findViewById(R.id.clearBubbles);
@@ -299,43 +256,6 @@ public class PdfViewerActivity extends AppCompatActivity{
                 translatedPages.remove(pdfView.getCurrentPage());
             }
         });
-    }
-
-
-
-    //zmiana pdfa na liste bitmap
-    private ArrayList<Bitmap> pdfToBitmap(File pdfFile) {
-        ArrayList<Bitmap> bitmaps = new ArrayList<>();
-
-        try {
-            PdfRenderer renderer = new PdfRenderer(ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY));
-
-            Bitmap bitmap;
-            final int pageCount = renderer.getPageCount();
-            for (int i = 0; i < pageCount; i++) {
-                PdfRenderer.Page page = renderer.openPage(i);
-
-                int width = getResources().getDisplayMetrics().densityDpi / 72 * page.getWidth();
-                int height = getResources().getDisplayMetrics().densityDpi / 72 * page.getHeight();
-                bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-
-                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
-
-                bitmaps.add(bitmap);
-
-                // close the page
-                page.close();
-
-            }
-
-            // close the renderer
-            renderer.close();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
-        return bitmaps;
-
     }
 
     // Upload file to storage and return a path.
@@ -439,14 +359,6 @@ public class PdfViewerActivity extends AppCompatActivity{
                         Log.d("THREAD_TEST", "endUIThread");
                     }
                 });
-
-                //Page page2 = new Page(pdfPageAsBitmap);
-                //page2.setSpeech_bubbles(speechBubbles);
-
-                Bitmap bitmap = page2.image_with_speech_bubbles(3);
-                //TODO: wywalic to kiedys, teraz jest do testu tylko
-                //MediaStore.Images.Media.insertImage(getContentResolver(), bitmap, "testowyObrazekRectangle8", "lolxd");
-                Log.d("THREAD_TEST", "endThread");
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -460,11 +372,6 @@ public class PdfViewerActivity extends AppCompatActivity{
                 PdfRenderer renderer = new PdfRenderer(ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY));
                 PdfRenderer.Page page = renderer.openPage(pageIdx);
 
-                //TODO: zakomentowane, bo testujemy
-                //int width = DDpi / 72 * page.getWidth();
-                //int height = DDpi / 72 * page.getHeight();
-
-                //TODO:tutaj robic skale, najpierw znajac proporcje tej strony z PDFView
                 float onePageWidth = pdfView.getPageSize(pageIdx).getWidth();
                 float onePageHeight = pdfView.getPageSize(pageIdx).getHeight();
                 float wxhProportion = onePageWidth / onePageHeight;
@@ -646,7 +553,6 @@ public class PdfViewerActivity extends AppCompatActivity{
                 Log.d("TESTWYKRYCIA", String.valueOf(exception));
             }
 
-            //Log.d("ONTAPTEST", "Page[0] = " + pdfView.getPageSize(0) + " | Page[1] = " + pdfView.getPageSize(1) + " | Page[2] = " + pdfView.getPageSize(2));
             return false;
         }
 
