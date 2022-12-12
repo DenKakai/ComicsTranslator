@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
 
 
 public class PdfViewerActivity extends AppCompatActivity{
@@ -359,6 +360,8 @@ public class PdfViewerActivity extends AppCompatActivity{
         }
 
 
+
+
         //zmiana jednej strony pdfa na bitmape
         private Bitmap pdfPageToBitmap(File pdfFile, int pageIdx) {
             Bitmap bitmap = null;
@@ -387,6 +390,51 @@ public class PdfViewerActivity extends AppCompatActivity{
             }
             return bitmap;
 
+        }
+
+
+
+
+    }
+
+    class TranslatorRunnable implements Runnable {
+        String text;
+        String translateResult;
+        WordCheck w;
+
+        public TranslatorRunnable(String text, WordCheck w) {
+            this.text = text;
+            this.w = w;
+        }
+
+        public void setText(String text) {
+            this.text = text;
+        }
+
+        public String getTranslateResult() {
+            return translateResult;
+        }
+
+        @Override
+        public void run() {
+            Translator translator = new Translator();
+            WordCheck w2 = new WordCheck();
+            try {
+                CountDownLatch countDownLatch = new CountDownLatch(1);
+                translator.run(text, w2, countDownLatch);
+                countDownLatch.await();
+                String tlum = w2.getTest();
+                Log.d("tlum", tlum);
+                Handler threadHandler = new Handler(Looper.getMainLooper());
+                threadHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        w.setTest(tlum);
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
 
@@ -525,9 +573,10 @@ public class PdfViewerActivity extends AppCompatActivity{
 
 
                     // tlumaczenie, narazie nie dziala
-                    Translator translator = new Translator();
-                    translator.run(text2);
+                    WordCheck w = new WordCheck();
 
+                    TranslatorRunnable translatorRunnable = new TranslatorRunnable(text2, w);
+                    translatorRunnable.run();
 
                 }
 

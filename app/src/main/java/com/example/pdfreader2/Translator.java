@@ -4,6 +4,7 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.concurrent.CountDownLatch;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -14,11 +15,12 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 public class Translator {
+
     private final OkHttpClient client = new OkHttpClient();
     String langTo = "pl";
     String langFrom = "en";
 
-    public void run(String text) throws Exception {
+    public void run(String text, WordCheck w, CountDownLatch countDownLatch) throws Exception {
         Request request = new Request.Builder()
                 .url("https://script.google.com/macros/s/AKfycbyE0UgofkOwPvNWLpUw3Fe0kcAo2-bU66-sqGe2bstr_5zRmXaxkG6TJpVPt0_g8_ca/exec" +
                         "?q=" + URLEncoder.encode(text, "UTF-8") +
@@ -29,9 +31,11 @@ public class Translator {
         client.newCall(request).enqueue(new Callback() {
             @Override public void onFailure(Call call, IOException e) {
                 e.printStackTrace();
+                countDownLatch.countDown();
             }
 
             @Override public void onResponse(Call call, Response response) throws IOException {
+                String resp = "";
                 try (ResponseBody responseBody = response.body()) {
                     if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
 
@@ -40,8 +44,11 @@ public class Translator {
                         System.out.println(responseHeaders.name(i) + ": " + responseHeaders.value(i));
                     }
 
-                    Log.d("tl", responseBody.string());
+                    resp = responseBody.string();
+                    w.setTest(resp);
+                    Log.d("tl1", w.getTest());
                 }
+                countDownLatch.countDown();
             }
         });
     }
