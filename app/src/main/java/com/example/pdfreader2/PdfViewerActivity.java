@@ -138,7 +138,8 @@ public class PdfViewerActivity extends AppCompatActivity{
         Log.d("TEST_BITMAPY", String.valueOf(page.getSpeech_bubbles()));**/
 
 
-        //TODO: Naprawic zoomout by na np. 172% zooma spadlo do 100%
+        //TODO: zoomout ma nie przecuac ekranu do dolnego lewego rogu, a zoomin ma nie przerzucac do gornego lewego rogu
+        //TODO: po tym jak sie zrobi clearbubbles/findbubbles i sie dopisza do slownika, to nie wyswietlaja sie dopooki nie wykona sie jeszcze raz ondraw. trzeba to jakos wymusic
 
 
         //przyblizenie
@@ -149,15 +150,41 @@ public class PdfViewerActivity extends AppCompatActivity{
             public void onClick(View view) {
                 int curPage = pdfView.getCurrentPage();
 
-                pdfView.zoomTo(pdfView.getZoom() + 1f);
-                pdfView.jumpTo(curPage);
-                pdfView.loadPages();
+                if (pdfView.getZoom() < 5f) {
+                    pdfView.zoomTo(pdfView.getZoom() + 1f);
+                    pdfView.jumpTo(curPage);
+                    pdfView.loadPages();
+                }
+
+                if (pdfView.getZoom() == 5f) {
+                    mZoomInButton.setEnabled(false);
+                    mZoomInButton.setAlpha(.5f);
+                    mZoomInButton.setClickable(false);
+
+                    mZoomOutButton.setEnabled(true);
+                    mZoomOutButton.setAlpha(1f);
+                    mZoomOutButton.setClickable(true);
+                } else
+                {
+                    mZoomInButton.setEnabled(true);
+                    mZoomInButton.setAlpha(1f);
+                    mZoomInButton.setClickable(true);
+
+                    mZoomOutButton.setEnabled(true);
+                    mZoomOutButton.setAlpha(1f);
+                    mZoomOutButton.setClickable(true);
+                }
             }
         });
 
 
         //oddalenie
         mZoomOutButton = (Button) findViewById(R.id.zoomOut);
+
+        mZoomOutButton.setEnabled(false);
+        mZoomOutButton.setAlpha(.5f);
+        mZoomOutButton.setClickable(false);
+
         mZoomOutButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -169,10 +196,32 @@ public class PdfViewerActivity extends AppCompatActivity{
                     pdfView.zoomTo(curZoom - 1f);
                     pdfView.jumpTo(curPage);
                     pdfView.loadPages();
+                } else if (curZoom > 1f){
+                    pdfView.zoomTo(1f);
+                    pdfView.jumpTo(curPage);
+                    pdfView.loadPages();
+                }
+
+                if (curZoom == 1f) {
+                    mZoomOutButton.setEnabled(false);
+                    mZoomOutButton.setAlpha(.5f);
+                    mZoomOutButton.setClickable(false);
+
+                    mZoomInButton.setEnabled(true);
+                    mZoomInButton.setAlpha(1f);
+                    mZoomInButton.setClickable(true);
+                } else
+                {
+                    mZoomOutButton.setEnabled(true);
+                    mZoomOutButton.setAlpha(1f);
+                    mZoomOutButton.setClickable(true);
+
+                    mZoomInButton.setEnabled(true);
+                    mZoomInButton.setAlpha(1f);
+                    mZoomInButton.setClickable(true);
                 }
             }
         });
-
 
         //zmiana strony w lewo
         mPageLeftButton = (Button) findViewById(R.id.pageLeft);
@@ -419,7 +468,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                 float onePageWidth = pdfView.getPageSize(pageIdx).getWidth();
                 float onePageHeight = pdfView.getPageSize(pageIdx).getHeight();
                 float wxhProportion = onePageWidth / onePageHeight;
-                int max_px = 17000000;
+                int max_px = 13500000;
                 int width = (int) Math.floor(Math.sqrt(max_px * wxhProportion));
                 int height = (int) (width / wxhProportion);
                 Log.d("height and width", width + " x " + height);
@@ -565,7 +614,6 @@ public class PdfViewerActivity extends AppCompatActivity{
             float thisPageX = 0f;
             float thisPageXRealScale = 0f;
             if (pageIdx != 0) {
-                //TODO: teraz uznaje, ze kazda strona ma ten sam width, zrobic liste z suma kulumowana i brac z tego zamaist page * onePageWidth
                 thisPageX = mappedX - cumXOffset.get(pageIdx-1) * pdfView.getZoom();
             } else {
                 thisPageX = mappedX;

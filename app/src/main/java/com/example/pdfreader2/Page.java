@@ -1,7 +1,6 @@
 package com.example.pdfreader2;
 
 import android.graphics.Bitmap;
-import android.util.Log;
 
 import org.opencv.android.Utils;
 import org.opencv.core.*;
@@ -17,6 +16,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
 
 public class Page {
     private Mat orig_image;
@@ -170,10 +170,10 @@ public class Page {
             }
         }
         for (Rectangle rect : rects) {
-            rect.setStartX((int)(rect.getStartX() * rW));
-            rect.setEndX((int)(rect.getEndX() * rW));
-            rect.setStartY((int)(rect.getStartY() * rH));
-            rect.setEndY((int)(rect.getEndY() * rH));
+            rect.setStartX(Math.max((int)(rect.getStartX() * rW), 0));
+            rect.setEndX(Math.min((int)(rect.getEndX() * rW), this.orig_image.cols()));
+            rect.setStartY(Math.min((int)(rect.getStartY() * rH), this.orig_image.rows()));
+            rect.setEndY(Math.max((int)(rect.getEndY() * rH), 0));
         }
         return makeBiggerRectangles(rects, bigger_frame_Wpx, bigger_frame_Hpx,
                 use_classifier, bubblesClassifier);
@@ -196,7 +196,9 @@ public class Page {
         List<Rectangle> not_bubbles = new ArrayList<>();
         this.orig_image.copyTo(image);
         Mat datasetHist = new Mat();
-        for (Rectangle speech_bubble : bubbles_copy) {
+
+        for (int i = 0; i < bubbles_copy.size(); i ++) {
+            Rectangle speech_bubble = bubbles_copy.get(i);
             Mat croppedMat = image.submat(speech_bubble.getStartY(), speech_bubble.getEndY(),
                     speech_bubble.getStartX(), speech_bubble.getEndX());
             Mat imgHSV = new Mat();
@@ -210,6 +212,7 @@ public class Page {
             imgHist = imgHist.t();
             datasetHist.push_back(imgHist);
         }
+
         datasetHist.convertTo(datasetHist, CvType.CV_32F);
         for (int i = 0; i < datasetHist.rows(); i++) {
             Mat sample = datasetHist.row(i);
@@ -338,6 +341,20 @@ public class Page {
         }
 
         bigger_rectangles.removeAll(rectangles_to_del);
+
+        //making smaller rectangles if they are stick out of image
+
+        for (int i = 0; i < bigger_rectangles.size(); i++) {
+            if (bigger_rectangles.get(i).getStartX() < 0) {
+                bigger_rectangles.get(i).setStartX(0);
+            } if (bigger_rectangles.get(i).getStartY() > this.orig_image.rows()) {
+                bigger_rectangles.get(i).setStartY(this.orig_image.rows());
+            } if (bigger_rectangles.get(i).getEndX() > this.orig_image.cols()) {
+                bigger_rectangles.get(i).setEndX(this.orig_image.cols());
+            } if (bigger_rectangles.get(i).getEndY() < 0) {
+                bigger_rectangles.get(i).setEndY(0);
+            }
+        }
 
         // making frames a little bit bigger
 
