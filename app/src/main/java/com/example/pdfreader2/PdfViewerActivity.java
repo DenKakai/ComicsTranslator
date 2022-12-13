@@ -460,6 +460,8 @@ public class PdfViewerActivity extends AppCompatActivity{
 
             Log.d("Rysowanie", String.valueOf(translatedPages.keySet()));
             if(translatedPages.containsKey(pdfView.getCurrentPage())) {
+                TextPaint textPaint = new TextPaint();
+                textPaint.setColor(Color.BLACK);
                 for (Rectangle bubble : translatedPages.get(pdfView.getCurrentPage())) {
                     Log.d("Bubble", String.valueOf(bubble));
                     int startX = (int) (bubble.getStartX() * pdfView.getZoom());
@@ -467,31 +469,42 @@ public class PdfViewerActivity extends AppCompatActivity{
                     int endX = (int) (bubble.getEndX() * pdfView.getZoom());
                     int endY = (int) (bubble.getEndY() * pdfView.getZoom());
                     canvas.drawRect(startX, startY, endX, endY, paintBG);
+                    RectF rect = new RectF(startX, startY, endX, endY);
+                    float fontSize = bubble.getOptTextSize();
+                    textPaint.setTextSize(fontSize);
+                    StaticLayout sl = new StaticLayout(bubble.getText(), textPaint,
+                            bubble.getWidth(), Layout.Alignment.ALIGN_CENTER,
+                            1, 1, false);
+                    canvas.save();
+                    canvas.translate(rect.left, rect.top);
+                    sl.draw(canvas);
+                    canvas.restore();
+
                 }
             }
 
-            int startX = (int) (236 * pdfView.getZoom());
-            int startY = (int) (282 * pdfView.getZoom());
-            int endX = (int) (546 * pdfView.getZoom());
-            int endY = (int) (487 * pdfView.getZoom());
-            Rectangle example_rectangle = new Rectangle(startX, startY, endX, endY);
-            example_rectangle.setText("OH, HEY... HOW'S YOUR MOM? XDDD XD XDDD XDDDDD XD");
-            //rectangle.updateOptSize()
-            canvas.drawRect(startX, startY, endX, endY, paintBG);
-
-            RectF rect = new RectF(startX, startY, endX, endY);
-            TextPaint textPaint = new TextPaint();
-            float fontSize = example_rectangle.getOptTextSize();
-            textPaint.setColor(Color.BLACK);
-            textPaint.setTextSize(fontSize);
-            StaticLayout sl = new StaticLayout(example_rectangle.getText(), textPaint,
-                    example_rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
-                    1, 1, false);
-            Log.d("TextHeight", String.valueOf(sl.getHeight()));
-            //canvas.save();
-            canvas.translate(rect.left, rect.top);
-            sl.draw(canvas);
-            //canvas.restore();
+//            int startX = (int) (236 * pdfView.getZoom());
+//            int startY = (int) (282 * pdfView.getZoom());
+//            int endX = (int) (546 * pdfView.getZoom());
+//            int endY = (int) (487 * pdfView.getZoom());
+//            Rectangle example_rectangle = new Rectangle(startX, startY, endX, endY);
+//            example_rectangle.setText("OH, HEY... HOW'S YOUR MOM? XDDD XD XDDD XDDDDD XD");
+//            //rectangle.updateOptSize()
+//            canvas.drawRect(startX, startY, endX, endY, paintBG);
+//
+//            RectF rect = new RectF(startX, startY, endX, endY);
+//            TextPaint textPaint = new TextPaint();
+//            float fontSize = example_rectangle.getOptTextSize();
+//            textPaint.setColor(Color.BLACK);
+//            textPaint.setTextSize(fontSize);
+//            StaticLayout sl = new StaticLayout(example_rectangle.getText(), textPaint,
+//                    example_rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
+//                    1, 1, false);
+//            Log.d("TextHeight", String.valueOf(sl.getHeight()));
+//            //canvas.save();
+//            canvas.translate(rect.left, rect.top);
+//            sl.draw(canvas);
+//            //canvas.restore();
 
             // Use Color.parseColor to define HTML colors
         }

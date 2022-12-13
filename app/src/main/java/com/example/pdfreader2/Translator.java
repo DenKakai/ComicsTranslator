@@ -1,7 +1,5 @@
 package com.example.pdfreader2;
 
-import android.util.Log;
-
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.concurrent.CountDownLatch;
@@ -46,7 +44,6 @@ public class Translator {
 
                     resp = responseBody.string();
                     w.setTest(resp);
-                    Log.d("tl1", w.getTest());
                 }
                 countDownLatch.countDown();
             }
