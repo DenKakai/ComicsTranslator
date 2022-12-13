@@ -1,33 +1,17 @@
 package com.example.pdfreader2;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.viewpager.widget.ViewPager;
-
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.pdf.PdfRenderer;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
-import android.provider.MediaStore;
-import android.provider.Settings;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
@@ -35,35 +19,27 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
-import android.os.Process;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.github.barteksc.pdfviewer.PDFView;
-import com.github.barteksc.pdfviewer.listener.Callbacks;
-import com.github.barteksc.pdfviewer.listener.OnDrawListener;
-import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
-import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.googlecode.tesseract.android.TessBaseAPI;
-import com.shockwave.pdfium.util.SizeF;
+
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.opencv.android.Utils;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
-import org.opencv.core.Rect;
-import org.opencv.imgproc.Imgproc;
+import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
 
 
 public class PdfViewerActivity extends AppCompatActivity{
@@ -337,12 +313,46 @@ public class PdfViewerActivity extends AppCompatActivity{
                 float proportionMapping = pageDetectorWidth / onePageWidth;
 
                 List<Rectangle> speechBubblesRealXY = new ArrayList<>();
+                String pathTesseract = getPathTess("eng.traineddata", getContext());
+                TessBaseAPI tess = new TessBaseAPI();
+
+                if (!tess.init(pathTesseract, "eng")) {
+                    Log.d("TESTTESSERACT", "nie dziala");
+                    // Error initializing Tesseract (wrong data path or language)
+                    tess.recycle();
+                }
+
+
+
                 for (Rectangle bubble : speechBubbles) {
-                    speechBubblesRealXY.add(new Rectangle(
+                    Bitmap bitmap = getTappedRectangleAsBitmap(bubble, page2);
+
+
+                    tess.setImage(bitmap);
+                    String text = tess.getUTF8Text();
+                    String text2 = WordCheck.removeSingleChars(text);
+
+                    Translator translator = new Translator();
+                    WordCheck w2 = new WordCheck();
+                    String tlum = "";
+                    try {
+                        CountDownLatch countDownLatch = new CountDownLatch(1);
+                        translator.run(text2, w2, countDownLatch);
+                        countDownLatch.await();
+                        tlum = w2.getTest();
+                        Log.d("tlum", tlum);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    if (Objects.equals(tlum, "")) {continue;}
+                    Rectangle rectangle_new = new Rectangle(
                             (int) (bubble.getStartX() / proportionMapping),
                             (int) (bubble.getStartY() / proportionMapping),
                             (int) (bubble.getEndX() / proportionMapping),
-                            (int) (bubble.getEndY() / proportionMapping)));
+                            (int) (bubble.getEndY() / proportionMapping));
+                    rectangle_new.setText(tlum);
+
+                    speechBubblesRealXY.add(rectangle_new);
                 }
 
                 threadHandler.post(new Runnable() {
@@ -397,6 +407,8 @@ public class PdfViewerActivity extends AppCompatActivity{
         }
     }
 
+
+
     private Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
         Rectangle resultRectangle = null;
 
@@ -407,6 +419,35 @@ public class PdfViewerActivity extends AppCompatActivity{
             }
         }
         return resultRectangle;
+    }
+
+    private static String getPathTess(String file, Context context) {
+        AssetManager assetManager = context.getAssets();
+        BufferedInputStream inputStream = null;
+        try {
+            // Read data from assets.
+            inputStream = new BufferedInputStream(assetManager.open(file));
+            byte[] data = new byte[inputStream.available()];
+            inputStream.read(data);
+            inputStream.close();
+            // Create copy file in storage.
+            Log.d("testPlikuTesss", context.getFilesDir() + "/tessdata");
+            //TODO: sprawdzi czy mkdir jest konieczny, moze samo outFile wystarczy a jak nie, to dodac ifa na sprawdzanie czy ten folder istnieje
+            new File(context.getFilesDir() + "/tessdata").mkdirs();
+            File outFile = new File(context.getFilesDir() + "/tessdata", file);
+            FileOutputStream os = new FileOutputStream(outFile);
+            os.write(data);
+            os.close();
+            // Return a path to file which may be read in common way.
+            return context.getFilesDir().getAbsolutePath();
+        } catch (IOException ex) {
+            Log.i("TAG", "Failed to upload a file");
+        }
+        return "";
+    }
+
+    private Context getContext() {
+        return this;
     }
 
 
@@ -478,6 +519,29 @@ public class PdfViewerActivity extends AppCompatActivity{
                 mPageRightButton.setClickable(true);
             }
         }
+    }
+
+    private Bitmap getTappedRectangleAsBitmap(Rectangle rectangle, Page page) {
+        int colStart = rectangle.getStartX();
+        int colEnd = rectangle.getEndX();
+        int rowStart = rectangle.getStartY();
+        int rowEnd = rectangle.getEndY();
+
+        Mat image = new Mat();
+        page.getOrig_image().copyTo(image);
+        Mat croppedMat = image.submat(rowStart, rowEnd, colStart, colEnd);
+        Bitmap bitmap = Bitmap.createBitmap(croppedMat.cols(), croppedMat.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(croppedMat, bitmap);
+
+        Log.d("zapis", "proba zapisu");
+        try (FileOutputStream out = new FileOutputStream("a")) {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Log.d("zapis", "udany");
+
+        return bitmap;
     }
 
 
