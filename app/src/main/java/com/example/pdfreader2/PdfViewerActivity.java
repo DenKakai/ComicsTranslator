@@ -324,10 +324,15 @@ public class PdfViewerActivity extends AppCompatActivity{
                 Log.d("THREAD_TEST", "startGenerateSpeechBubblesThread");
                 Page page2 = new Page(pdfPageAsBitmap);
                 List<Rectangle> speechBubbles;
-                speechBubbles = page2.generate_speech_bubbles(0.5, 0.5,
+                List<Rectangle> rejectedBubbles;
+                List<List<Rectangle>> allBubbles;
+                allBubbles = page2.generate_speech_bubbles(0.5, 0.5,
                         bubblesDetector, 0.2,
                         true, bubblesClassifier);
+                speechBubbles = allBubbles.get(0);
+                rejectedBubbles = allBubbles.get(1);
                 page2.setSpeech_bubbles(speechBubbles);
+                page2.setRejected_speech_bubbles(rejectedBubbles);
                 Log.d("THREAD_TEST", "endGenerateSpeechBubblesThread" + speechBubbles.toArray().length + speechBubbles);
 
 
@@ -355,6 +360,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                         mFindBubblesButton.setClickable(true);
                         page.setOrig_image(page2.getOrig_image());
                         page.setSpeech_bubbles(speechBubbles);
+                        page.setRejected_speech_bubbles(rejectedBubbles);
                         translatedPages.put(pageIdx, speechBubblesRealXY);
                         Log.d("THREAD_TEST", "endUIThread");
                     }
