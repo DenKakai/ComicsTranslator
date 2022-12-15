@@ -470,10 +470,12 @@ public class PdfViewerActivity extends AppCompatActivity{
                     int endY = (int) (bubble.getEndY() * pdfView.getZoom());
                     canvas.drawRect(startX, startY, endX, endY, paintBG);
                     RectF rect = new RectF(startX, startY, endX, endY);
-                    float fontSize = bubble.getOptTextSize();
+                    Rectangle rectangle = new Rectangle(startX, startY, endX, endY);
+                    rectangle.setText(bubble.getText());
+                    float fontSize = rectangle.getOptTextSize();
                     textPaint.setTextSize(fontSize);
-                    StaticLayout sl = new StaticLayout(bubble.getText(), textPaint,
-                            bubble.getWidth(), Layout.Alignment.ALIGN_CENTER,
+                    StaticLayout sl = new StaticLayout(rectangle.getText(), textPaint,
+                            rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
                             1, 1, false);
                     canvas.save();
                     canvas.translate(rect.left, rect.top);
