@@ -78,6 +78,7 @@ public class PdfViewerActivity extends AppCompatActivity{
     private ImageButton mPageRightButton;
     private ImageButton mFindBubblesButton;
     private ImageButton mClearBubblesButton;
+    private ImageButton mToggleBubbleTranslateButton;
 
     private Page page = new Page();
     private ArrayList<Bitmap> pdfAsListOfBitmaps;
@@ -87,6 +88,7 @@ public class PdfViewerActivity extends AppCompatActivity{
     private Map<Integer, List<Rectangle>> translatedPages = new HashMap<Integer, List<Rectangle>>();
     File file;
     Bitmap pdfPageAsBitmap;
+    boolean translateBubbleFlag = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,6 +119,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
         //przyblizenie
         mZoomInButton = findViewById(R.id.zoomIn);
+        mZoomInButton.setAlpha(0.75f);
         mZoomInButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -131,7 +134,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
                 if (pdfView.getZoom() == 5f) {
                     mZoomInButton.setEnabled(false);
-                    mZoomInButton.setAlpha(.5f);
+                    mZoomInButton.setAlpha(.35f);
                     mZoomInButton.setClickable(false);
 
                     mZoomOutButton.setEnabled(true);
@@ -155,7 +158,7 @@ public class PdfViewerActivity extends AppCompatActivity{
         mZoomOutButton = findViewById(R.id.zoomOut);
 
         mZoomOutButton.setEnabled(false);
-        mZoomOutButton.setAlpha(.5f);
+        mZoomOutButton.setAlpha(.35f);
         mZoomOutButton.setClickable(false);
 
         mZoomOutButton.setOnClickListener(new View.OnClickListener() {
@@ -175,29 +178,27 @@ public class PdfViewerActivity extends AppCompatActivity{
                     pdfView.loadPages();
                 }
 
-                if (curZoom == 1f) {
+                if (pdfView.getZoom() == 1f) {
                     mZoomOutButton.setEnabled(false);
-                    mZoomOutButton.setAlpha(.5f);
+                    mZoomOutButton.setAlpha(.35f);
                     mZoomOutButton.setClickable(false);
 
-                    mZoomInButton.setEnabled(true);
-                    mZoomInButton.setAlpha(1f);
-                    mZoomInButton.setClickable(true);
                 } else
                 {
                     mZoomOutButton.setEnabled(true);
-                    mZoomOutButton.setAlpha(1f);
+                    mZoomOutButton.setAlpha(0.75f);
                     mZoomOutButton.setClickable(true);
 
-                    mZoomInButton.setEnabled(true);
-                    mZoomInButton.setAlpha(1f);
-                    mZoomInButton.setClickable(true);
                 }
+                mZoomInButton.setEnabled(true);
+                mZoomInButton.setAlpha(0.75f);
+                mZoomInButton.setClickable(true);
             }
         });
 
         //zmiana strony w lewo
         mPageLeftButton = findViewById(R.id.pageLeft);
+        mPageLeftButton.setAlpha(0.75f);
         mPageLeftButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -212,6 +213,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
         //zmiana strony w prawo
         mPageRightButton = findViewById(R.id.pageRight);
+        mPageRightButton.setAlpha(0.75f);
         mPageRightButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -238,6 +240,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
 
         mFindBubblesButton = findViewById(R.id.findBubbles);
+        mFindBubblesButton.setAlpha(0.75f);
         mFindBubblesButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -251,14 +254,35 @@ public class PdfViewerActivity extends AppCompatActivity{
             }
         });
 
+        //tlumaczenie chmurki
+
+        mToggleBubbleTranslateButton = findViewById(R.id.toggleBubbleTranslate);
+        mToggleBubbleTranslateButton.setAlpha(0.75f);
+        mToggleBubbleTranslateButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View view) {
+                if (translateBubbleFlag) {
+                    mToggleBubbleTranslateButton.setAlpha(0.75f);
+                    translateBubbleFlag = false;
+                }
+                else {
+                    mToggleBubbleTranslateButton.setAlpha(1f);
+                    translateBubbleFlag = true;
+                }
+            }
+        });
+
         //czyszczenie chmurek
 
         mClearBubblesButton = findViewById(R.id.clearBubbles);
+        mClearBubblesButton.setAlpha(0.75f);
         mClearBubblesButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View view) {
                 translatedPages.remove(pdfView.getCurrentPage());
+                pdfView.invalidate();
             }
         });
     }
@@ -318,7 +342,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                     public void run() {
                         //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
                         mFindBubblesButton.setEnabled(false);
-                        mFindBubblesButton.setAlpha(.5f);
+                        mFindBubblesButton.setAlpha(.35f);
                         mFindBubblesButton.setClickable(false);
                     }
                 });
@@ -393,7 +417,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                         Log.d("THREAD_TEST", "startUIThread");
                         //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
                         mFindBubblesButton.setEnabled(true);
-                        mFindBubblesButton.setAlpha(1f);
+                        mFindBubblesButton.setAlpha(.75f);
                         mFindBubblesButton.setClickable(true);
                         page.setOrig_image(page2.getOrig_image());
                         page.setSpeech_bubbles(speechBubbles);
@@ -598,20 +622,20 @@ public class PdfViewerActivity extends AppCompatActivity{
             }
             if (pageIdx == 0) {
                 mPageLeftButton.setEnabled(false);
-                mPageLeftButton.setAlpha(.5f);
+                mPageLeftButton.setAlpha(.35f);
                 mPageLeftButton.setClickable(false);
             } else {
                 mPageLeftButton.setEnabled(true);
-                mPageLeftButton.setAlpha(1f);
+                mPageLeftButton.setAlpha(.75f);
                 mPageLeftButton.setClickable(true);
             }
             if (pageIdx == (pageCount - 1)) {
                 mPageRightButton.setEnabled(false);
-                mPageRightButton.setAlpha(.5f);
+                mPageRightButton.setAlpha(.35f);
                 mPageRightButton.setClickable(false);
             } else {
                 mPageRightButton.setEnabled(true);
-                mPageRightButton.setAlpha(1f);
+                mPageRightButton.setAlpha(.75f);
                 mPageRightButton.setClickable(true);
             }
         }
@@ -691,39 +715,40 @@ public class PdfViewerActivity extends AppCompatActivity{
             Log.d("ONTAPTEST", "thisPageX = " + thisPageX + " | mappedY = " + mappedY);
             Log.d("ONTAPTEST", "thisPageXRealScale = " + thisPageXRealScale + " | thisPageYRealScale = " + thisPageYRealScale);
 
-            try {
-                Rectangle foundBubble = tappedRectangle(translatedPages.get(pageIdx), thisPageXRealScale, thisPageYRealScale);
-                Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
+            if (translateBubbleFlag) {
+                try {
+                    Rectangle foundBubble = tappedRectangle(translatedPages.get(pageIdx), thisPageXRealScale, thisPageYRealScale);
+                    Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
 
-                //TODO: zrobic jako toggle
 
-                //jezeli visible to invis, i na odwrot
-                foundBubble.setVisible(!foundBubble.isVisible());
+                    //jezeli visible to invis, i na odwrot
+                    foundBubble.setVisible(!foundBubble.isVisible());
 
-                //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
-                if (Objects.isNull(foundBubble.getText())) {
-                    String pathTesseract = getPathTess("eng.traineddata", getContext());
-                    TessBaseAPI tess = new TessBaseAPI();
+                    //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
+                    if (Objects.isNull(foundBubble.getText())) {
+                        String pathTesseract = getPathTess("eng.traineddata", getContext());
+                        TessBaseAPI tess = new TessBaseAPI();
 
-                    if (!tess.init(pathTesseract, "eng")) {
-                        Log.d("TESTTESSERACT", "nie dziala");
-                        // Error initializing Tesseract (wrong data path or language)
-                        tess.recycle();
+                        if (!tess.init(pathTesseract, "eng")) {
+                            Log.d("TESTTESSERACT", "nie dziala");
+                            // Error initializing Tesseract (wrong data path or language)
+                            tess.recycle();
+                        }
+
+                        float pageDetectorHeight = page.getOrig_image().rows();
+                        float onePageHeight2 = pdfView.getPageSize(pageIdx).getHeight();
+                        float proportion = pageDetectorHeight / onePageHeight2;
+                        Rectangle tappedRect = new Rectangle((int) (foundBubble.getStartX() * proportion), (int) (foundBubble.getStartY() * proportion), (int) (foundBubble.getEndX() * proportion), (int) (foundBubble.getEndY() * proportion));
+                        String translatedText = translateBubble(tappedRect, page, tess);
+                        Log.d("translatedText", translatedText);
+                        foundBubble.setText(translatedText);
+                        Log.d("setText", foundBubble.getText());
                     }
 
-                    float pageDetectorHeight = page.getOrig_image().rows();
-                    float onePageHeight2 = pdfView.getPageSize(pageIdx).getHeight();
-                    float proportion = pageDetectorHeight / onePageHeight2;
-                    Rectangle tappedRect = new Rectangle((int) (foundBubble.getStartX() * proportion), (int) (foundBubble.getStartY() * proportion), (int) (foundBubble.getEndX() * proportion), (int) (foundBubble.getEndY() * proportion));
-                    String translatedText = translateBubble(tappedRect, page, tess);
-                    Log.d("translatedText", translatedText);
-                    foundBubble.setText(translatedText);
-                    Log.d("setText", foundBubble.getText());
+
+                } catch (Exception exception) {
+                    Log.d("TESTWYKRYCIA", String.valueOf(exception));
                 }
-
-
-            } catch (Exception exception) {
-                Log.d("TESTWYKRYCIA", String.valueOf(exception));
             }
 
             pdfView.invalidate();
