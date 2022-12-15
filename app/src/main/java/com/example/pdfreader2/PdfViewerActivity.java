@@ -35,6 +35,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.Toast;
 import android.os.Process;
 
@@ -71,12 +72,12 @@ import org.opencv.imgproc.Imgproc;
 public class PdfViewerActivity extends AppCompatActivity{
 
     private PDFView pdfView;
-    private Button mZoomInButton;
-    private Button mZoomOutButton;
-    private Button mPageLeftButton;
-    private Button mPageRightButton;
-    private Button mFindBubblesButton;
-    private Button mClearBubblesButton;
+    private ImageButton mZoomInButton;
+    private ImageButton mZoomOutButton;
+    private ImageButton mPageLeftButton;
+    private ImageButton mPageRightButton;
+    private ImageButton mFindBubblesButton;
+    private ImageButton mClearBubblesButton;
 
     private Page page = new Page();
     private ArrayList<Bitmap> pdfAsListOfBitmaps;
@@ -115,7 +116,7 @@ public class PdfViewerActivity extends AppCompatActivity{
         //TODO: po tym jak sie zrobi clearbubbles/findbubbles i sie dopisza do slownika, to nie wyswietlaja sie dopooki nie wykona sie jeszcze raz ondraw. trzeba to jakos wymusic
 
         //przyblizenie
-        mZoomInButton = (Button) findViewById(R.id.zoomIn);
+        mZoomInButton = findViewById(R.id.zoomIn);
         mZoomInButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -151,7 +152,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
 
         //oddalenie
-        mZoomOutButton = (Button) findViewById(R.id.zoomOut);
+        mZoomOutButton = findViewById(R.id.zoomOut);
 
         mZoomOutButton.setEnabled(false);
         mZoomOutButton.setAlpha(.5f);
@@ -196,7 +197,7 @@ public class PdfViewerActivity extends AppCompatActivity{
         });
 
         //zmiana strony w lewo
-        mPageLeftButton = (Button) findViewById(R.id.pageLeft);
+        mPageLeftButton = findViewById(R.id.pageLeft);
         mPageLeftButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -210,7 +211,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
 
         //zmiana strony w prawo
-        mPageRightButton = (Button) findViewById(R.id.pageRight);
+        mPageRightButton = findViewById(R.id.pageRight);
         mPageRightButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -236,7 +237,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
 
 
-        mFindBubblesButton = (Button) findViewById(R.id.findBubbles);
+        mFindBubblesButton = findViewById(R.id.findBubbles);
         mFindBubblesButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -252,7 +253,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
         //czyszczenie chmurek
 
-        mClearBubblesButton = (Button) findViewById(R.id.clearBubbles);
+        mClearBubblesButton = findViewById(R.id.clearBubbles);
         mClearBubblesButton.setOnClickListener(new View.OnClickListener() {
 
             @Override

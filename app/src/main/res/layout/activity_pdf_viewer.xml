@@ -17,7 +17,7 @@
             android:id="@+id/pdfView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"/>
+            android:layout_weight="1" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -25,47 +25,68 @@
             android:gravity="bottom"
             android:orientation="horizontal">
 
-            <Button
+            <ImageButton
                 android:id="@+id/zoomIn"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Zoom I" />
+                android:layout_gravity="center"
+                android:background="@drawable/roundcorner"
+                android:src="@drawable/ic_baseline_zoom_in_24"/>
 
-            <Button
+            <ImageButton
                 android:id="@+id/zoomOut"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Zoom O" />
+                android:layout_gravity="center"
+                android:background="@drawable/roundcorner"
+                android:src="@drawable/ic_baseline_zoom_out_24" />
 
-            <Button
+            <ImageButton
                 android:id="@+id/pageLeft"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Page L" />
+                android:layout_gravity="center"
+                android:background="@drawable/roundcorner"
+                android:src="@drawable/ic_baseline_navigate_before_24" />
 
-            <Button
+            <ImageButton
                 android:id="@+id/pageRight"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Page R" />
+                android:layout_gravity="center"
+                android:background="@drawable/roundcorner"
+                android:src="@drawable/ic_baseline_navigate_next_24" />
 
-            <Button
+            <ImageButton
+                android:id="@+id/toggleBubbleTranslate"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_gravity="center"
+                android:background="@drawable/roundcorner"
+                android:src="@drawable/ic_baseline_textsms_24" />
+
+            <ImageButton
                 android:id="@+id/findBubbles"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Find Bub" />
+                android:layout_gravity="center"
+                android:background="@drawable/roundcorner"
+                android:src="@drawable/ic_baseline_document_scanner_24" />
 
-            <Button
+            <ImageButton
                 android:id="@+id/clearBubbles"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Clr Bub" />
+                android:layout_gravity="center"
+                android:background="@drawable/roundcorner"
+                android:src="@drawable/ic_baseline_layers_clear_24" />
 
         </LinearLayout>
 
