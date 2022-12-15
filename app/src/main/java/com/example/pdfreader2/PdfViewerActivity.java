@@ -1,17 +1,33 @@
 package com.example.pdfreader2;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.viewpager.widget.ViewPager;
+
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.pdf.PdfRenderer;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
+import android.provider.MediaStore;
+import android.provider.Settings;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
@@ -19,27 +35,35 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-
-import androidx.appcompat.app.AppCompatActivity;
+import android.widget.Toast;
+import android.os.Process;
 
 import com.github.barteksc.pdfviewer.PDFView;
+import com.github.barteksc.pdfviewer.listener.Callbacks;
+import com.github.barteksc.pdfviewer.listener.OnDrawListener;
+import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
+import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.googlecode.tesseract.android.TessBaseAPI;
-
-import org.opencv.android.Utils;
-import org.opencv.core.Mat;
+import com.shockwave.pdfium.util.SizeF;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.CountDownLatch;
+
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.Rect;
+import org.opencv.imgproc.Imgproc;
 
 
 public class PdfViewerActivity extends AppCompatActivity{
@@ -300,10 +324,15 @@ public class PdfViewerActivity extends AppCompatActivity{
                 Log.d("THREAD_TEST", "startGenerateSpeechBubblesThread");
                 Page page2 = new Page(pdfPageAsBitmap);
                 List<Rectangle> speechBubbles;
-                speechBubbles = page2.generate_speech_bubbles(0.5, 0.5,
+                List<Rectangle> rejectedBubbles;
+                List<List<Rectangle>> allBubbles;
+                allBubbles = page2.generate_speech_bubbles(0.5, 0.5,
                         bubblesDetector, 0.2,
                         true, bubblesClassifier);
+                speechBubbles = allBubbles.get(0);
+                rejectedBubbles = allBubbles.get(1);
                 page2.setSpeech_bubbles(speechBubbles);
+                page2.setRejected_speech_bubbles(rejectedBubbles);
                 Log.d("THREAD_TEST", "endGenerateSpeechBubblesThread" + speechBubbles.toArray().length + speechBubbles);
 
 
@@ -365,6 +394,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                         mFindBubblesButton.setClickable(true);
                         page.setOrig_image(page2.getOrig_image());
                         page.setSpeech_bubbles(speechBubbles);
+                        page.setRejected_speech_bubbles(rejectedBubbles);
                         translatedPages.put(pageIdx, speechBubblesRealXY);
                         Log.d("THREAD_TEST", "endUIThread");
                     }
@@ -407,9 +437,7 @@ public class PdfViewerActivity extends AppCompatActivity{
         }
     }
 
-
-
-    private Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
+    public static Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
         Rectangle resultRectangle = null;
 
         for (Rectangle rectangle : rectangles) {
