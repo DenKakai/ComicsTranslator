@@ -15,10 +15,26 @@ import androidx.annotation.NonNull;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.tom_roush.pdfbox.pdmodel.PDDocument;
+import com.tom_roush.pdfbox.pdmodel.PDPage;
+import com.tom_roush.pdfbox.pdmodel.PDPageContentStream;
+import com.tom_roush.pdfbox.pdmodel.common.PDRectangle;
+import com.tom_roush.pdfbox.pdmodel.graphics.PDXObject;
+import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory;
+import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import com.tom_roush.pdfbox.util.PDFBoxResourceLoader;
+
 import org.apache.commons.io.FilenameUtils;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>{
 
@@ -61,16 +77,71 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>{
                     context.startActivity(intent);
                 }else {
                     //co ma sie stac po wybraniu pliku
-                    if(Arrays.asList("pdf","cbz","cbv").contains(FilenameUtils.getExtension(selectedFile.getPath()))) {
-                        //TODO: dodac rozne odpalenie pdf, cbz, cbv ifami
-                        Intent intent = new Intent(context, PdfViewerActivity.class);
-                        String path = selectedFile.getPath();
-                        intent.putExtra("path", path);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        context.startActivity(intent);
+                    if(Arrays.asList("pdf","cbz").contains(FilenameUtils.getExtension(selectedFile.getPath()))) {
+                        if(Arrays.asList("pdf").contains(FilenameUtils.getExtension(selectedFile.getPath()))) {
+                            Intent intent = new Intent(context, PdfViewerActivity.class);
+                            String path = selectedFile.getPath();
+                            intent.putExtra("path", path);
+                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            context.startActivity(intent);
+                        }
+                        else if(Arrays.asList("cbz").contains(FilenameUtils.getExtension(selectedFile.getPath()))) {
+                            PDFBoxResourceLoader.init(context);
+
+                            PDDocument document = new PDDocument();
+
+                            try {
+                                ZipFile zipFile = new ZipFile(selectedFile.getPath());
+                                Enumeration<? extends ZipEntry> entries = zipFile.entries();
+                                Log.d("xd", "Entries:");
+
+                                // iterate through all the entries
+                                while (entries.hasMoreElements()) {
+                                    // get the zip entry
+                                    ZipEntry entry = entries.nextElement();
+                                    InputStream is = zipFile.getInputStream(entry);
+
+                                    PDImageXObject img = JPEGFactory.createFromStream(document, is);
+                                    float width = img.getWidth();
+                                    float height = img.getHeight();
+                                    PDPage page = new PDPage(new PDRectangle(width, height));
+                                    document.addPage(page);
+                                    PDPageContentStream contentStream = new PDPageContentStream(document, page);
+                                    contentStream.drawImage(img, 0, 0);
+                                    contentStream.close();
+                                    is.close();
+
+                                    // display the entry
+                                    Log.d("xd", entry.getName());
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            try {
+                                String path = context.getFilesDir().getAbsolutePath();
+                                Log.d("xd", path);
+                                document.save(path + "/chosenComic.pdf");
+                                document.close();
+
+                                /*File directory = new File(path);
+                                File[] files = directory.listFiles();
+                                Log.d("Files", "Size: "+ files.length);
+                                for (int i = 0; i < files.length; i++)
+                                {
+                                    Log.d("Files", "FileName:" + files[i].getName());
+                                }*/
+
+                                Intent intent = new Intent(context, PdfViewerActivity.class);
+                                intent.putExtra("path", path + "/chosenComic.pdf");
+                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                context.startActivity(intent);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
                     }
                     else {
-                        Toast.makeText(context,"Wybierz plik .pdf, .cbz albo .cbv", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context,"Wybierz plik .pdf albo .cbz", Toast.LENGTH_SHORT).show();
                     }
                 }
             }
