@@ -5,6 +5,9 @@ import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.pdf.PdfRenderer;
@@ -42,7 +45,7 @@ import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 
 
-public class PdfViewerActivity extends AppCompatActivity{
+public class PdfViewerActivity extends AppCompatActivity {
 
     private PDFView pdfView;
     private Button mZoomInButton;
@@ -61,6 +64,8 @@ public class PdfViewerActivity extends AppCompatActivity{
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pdf_viewer);
 
@@ -257,6 +262,10 @@ public class PdfViewerActivity extends AppCompatActivity{
         return "";
     }
 
+
+
+
+
     class ExampleRunnable implements Runnable {
         int DDpi;
         File file;
@@ -316,21 +325,69 @@ public class PdfViewerActivity extends AppCompatActivity{
                 String pathTesseract = getPathTess("eng.traineddata", getContext());
                 TessBaseAPI tess = new TessBaseAPI();
 
-                if (!tess.init(pathTesseract, "eng")) {
+                if (!tess.init(pathTesseract, "eng+com")) {
                     Log.d("TESTTESSERACT", "nie dziala");
                     // Error initializing Tesseract (wrong data path or language)
                     tess.recycle();
                 }
 
 
-
+                long conf = 0;
                 for (Rectangle bubble : speechBubbles) {
                     Bitmap bitmap = getTappedRectangleAsBitmap(bubble, page2);
+                   // bitmap = getResizedBitmap(bitmap, (int) 1.2* bitmap.getWidth(), (int) 1.2* bitmap.getHeight());
+
+//                    Mat source = new Mat();
+//                    Utils.bitmapToMat(bitmap, source);
+//                    Mat destination = new Mat(source.rows(),source.cols(),source.type());
+//                    int erosion_size = 0;
+//                    Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(2*erosion_size + 1, 2*erosion_size+1));
+//                    Imgproc.erode(source, destination, element);
+//                    Utils.matToBitmap(destination, bitmap);
+//
+//                    int dilation_size = 0;
+//                    destination = source;
+//                    Mat element1 = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new  Size(2*dilation_size + 1, 2*dilation_size+1));
+//                    Imgproc.dilate(source, destination, element1);
+
+
+                    Paint paint = new Paint();
+                    Canvas canvas = new Canvas(bitmap);
+                    ColorMatrix cm = new ColorMatrix();
+                    float a = 77f;
+                    float b = 151f;
+                    float c = 28f;
+                    float t = 120 * -256f;
+                    cm.set(new float[] { a, b, c, 0, t, a, b, c, 0, t, a, b, c, 0, t, 0, 0, 0, 1, 0 });
+                    paint.setColorFilter(new ColorMatrixColorFilter(cm));
+                    canvas.drawBitmap(bitmap, 0, 0, paint);
+                    Bitmap bitmap2 = getTappedRectangleAsBitmap(bubble, page2);
+
+
+
 
 
                     tess.setImage(bitmap);
-                    String text = tess.getUTF8Text();
+                    String text_1 = tess.getUTF8Text();
+                    int c1 = tess.meanConfidence();
+
+                    tess.setImage(bitmap2);
+                    String text_2 = tess.getUTF8Text();
+                    int c2 = tess.meanConfidence();
+                    Log.d("confidence", c1 + " " + c2);
+
+                    String text = "";
+                    if (c2 > c1) {
+                        text = text_2;
+                    } else {
+                        text = text_1;
+                    }
+
+
+                    conf += tess.meanConfidence();
                     String text2 = WordCheck.removeSingleChars(text);
+                    Log.d("ocr", text + " " + text.length());
+                    Log.d("ocr2", text2 + " " + text2.length());
 
                     Translator translator = new Translator();
                     WordCheck w2 = new WordCheck();
@@ -340,11 +397,12 @@ public class PdfViewerActivity extends AppCompatActivity{
                         translator.run(text2, w2, countDownLatch);
                         countDownLatch.await();
                         tlum = w2.getTest();
-                        Log.d("tlum", tlum);
+                        Log.d("tlum", tlum + " " + tlum.length());
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                     if (Objects.equals(tlum, "")) {continue;}
+                    if (tlum.equals(text2)) {continue;}
                     Rectangle rectangle_new = new Rectangle(
                             (int) (bubble.getStartX() / proportionMapping),
                             (int) (bubble.getStartY() / proportionMapping),
@@ -354,6 +412,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
                     speechBubblesRealXY.add(rectangle_new);
                 }
+                Log.d("mean conf", String.valueOf(conf / speechBubbles.size()));
 
                 threadHandler.post(new Runnable() {
                     @Override
@@ -407,6 +466,17 @@ public class PdfViewerActivity extends AppCompatActivity{
         }
     }
 
+    public static Bitmap getResizedBitmap(Bitmap bm, int newWidth,
+                                          int newHeight) {
+        final int w = bm.getWidth();
+        final int h = bm.getHeight();
+        final float sw = ((float) newWidth) / w;
+        final float sh = ((float) newHeight) / h;
+
+        Matrix matrix = new Matrix();
+        matrix.postScale(sw, sh);
+        return Bitmap.createBitmap(bm, 0, 0, w, h, matrix, false);
+    }
 
 
     private Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
@@ -485,30 +555,6 @@ public class PdfViewerActivity extends AppCompatActivity{
                 }
             }
 
-//            int startX = (int) (236 * pdfView.getZoom());
-//            int startY = (int) (282 * pdfView.getZoom());
-//            int endX = (int) (546 * pdfView.getZoom());
-//            int endY = (int) (487 * pdfView.getZoom());
-//            Rectangle example_rectangle = new Rectangle(startX, startY, endX, endY);
-//            example_rectangle.setText("OH, HEY... HOW'S YOUR MOM? XDDD XD XDDD XDDDDD XD");
-//            //rectangle.updateOptSize()
-//            canvas.drawRect(startX, startY, endX, endY, paintBG);
-//
-//            RectF rect = new RectF(startX, startY, endX, endY);
-//            TextPaint textPaint = new TextPaint();
-//            float fontSize = example_rectangle.getOptTextSize();
-//            textPaint.setColor(Color.BLACK);
-//            textPaint.setTextSize(fontSize);
-//            StaticLayout sl = new StaticLayout(example_rectangle.getText(), textPaint,
-//                    example_rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
-//                    1, 1, false);
-//            Log.d("TextHeight", String.valueOf(sl.getHeight()));
-//            //canvas.save();
-//            canvas.translate(rect.left, rect.top);
-//            sl.draw(canvas);
-//            //canvas.restore();
-
-            // Use Color.parseColor to define HTML colors
         }
     }
 
@@ -649,6 +695,8 @@ public class PdfViewerActivity extends AppCompatActivity{
             Log.d("TEST_CUMX", String.valueOf(cumXOffset));
         }
     }
+
+
 }
 
 
