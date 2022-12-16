@@ -12,6 +12,8 @@ public class Rectangle {
     private String text;
     private int width;
     private int optTextSize;
+    private boolean visible;
+    private boolean accepted;
 
 
     public Rectangle(int startX, int startY, int endX, int endY) {
@@ -126,4 +128,19 @@ public class Rectangle {
         }
     }
 
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+    }
+
+    public boolean isAccepted() {
+        return accepted;
+    }
+
+    public void setAccepted(boolean accepted) {
+        this.accepted = accepted;
+    }
 }

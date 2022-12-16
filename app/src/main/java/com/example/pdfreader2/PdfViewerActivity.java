@@ -1,6 +1,18 @@
 package com.example.pdfreader2;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.viewpager.widget.ViewPager;
+
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -9,12 +21,17 @@ import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.pdf.PdfRenderer;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
+import android.provider.MediaStore;
+import android.provider.Settings;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
@@ -22,21 +39,26 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-
-import androidx.appcompat.app.AppCompatActivity;
+import android.widget.ImageButton;
+import android.widget.Toast;
+import android.os.Process;
 
 import com.github.barteksc.pdfviewer.PDFView;
+import com.github.barteksc.pdfviewer.listener.Callbacks;
+import com.github.barteksc.pdfviewer.listener.OnDrawListener;
+import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
+import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.googlecode.tesseract.android.TessBaseAPI;
-
-import org.opencv.android.Utils;
-import org.opencv.core.Mat;
+import com.shockwave.pdfium.util.SizeF;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,33 +66,42 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.Rect;
+import org.opencv.imgproc.Imgproc;
 
-public class PdfViewerActivity extends AppCompatActivity {
+
+public class PdfViewerActivity extends AppCompatActivity{
 
     private PDFView pdfView;
-    private Button mZoomInButton;
-    private Button mZoomOutButton;
-    private Button mPageLeftButton;
-    private Button mPageRightButton;
-    private Button mFindBubblesButton;
-    private Button mClearBubblesButton;
+    private ImageButton mZoomInButton;
+    private ImageButton mZoomOutButton;
+    private ImageButton mPageLeftButton;
+    private ImageButton mPageRightButton;
+    private ImageButton mFindBubblesButton;
+    private ImageButton mClearBubblesButton;
+    private ImageButton mToggleBubbleTranslateButton;
 
-    private Page page;
+    private Page page = new Page();
     private ArrayList<Bitmap> pdfAsListOfBitmaps;
     private Handler mainHandler = new Handler();
     private List<Integer> cumXOffset = new ArrayList<>();
 
     private Map<Integer, List<Rectangle>> translatedPages = new HashMap<Integer, List<Rectangle>>();
+    File file;
+    Bitmap pdfPageAsBitmap;
+    boolean translateBubbleFlag = false;
 
+    @SuppressLint("WrongViewCast")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pdf_viewer);
 
         String path = getIntent().getStringExtra("path");
-        File file = new File(path);
+        file = new File(path);
 
         pdfView = findViewById(R.id.pdfView);
         pdfView.fromFile(file)
@@ -92,7 +123,8 @@ public class PdfViewerActivity extends AppCompatActivity {
         //TODO: po tym jak sie zrobi clearbubbles/findbubbles i sie dopisza do slownika, to nie wyswietlaja sie dopooki nie wykona sie jeszcze raz ondraw. trzeba to jakos wymusic
 
         //przyblizenie
-        mZoomInButton = (Button) findViewById(R.id.zoomIn);
+        mZoomInButton = findViewById(R.id.zoomIn);
+        mZoomInButton.setAlpha(0.75f);
         mZoomInButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -107,7 +139,7 @@ public class PdfViewerActivity extends AppCompatActivity {
 
                 if (pdfView.getZoom() == 5f) {
                     mZoomInButton.setEnabled(false);
-                    mZoomInButton.setAlpha(.5f);
+                    mZoomInButton.setAlpha(.35f);
                     mZoomInButton.setClickable(false);
 
                     mZoomOutButton.setEnabled(true);
@@ -128,10 +160,10 @@ public class PdfViewerActivity extends AppCompatActivity {
 
 
         //oddalenie
-        mZoomOutButton = (Button) findViewById(R.id.zoomOut);
+        mZoomOutButton = findViewById(R.id.zoomOut);
 
         mZoomOutButton.setEnabled(false);
-        mZoomOutButton.setAlpha(.5f);
+        mZoomOutButton.setAlpha(.35f);
         mZoomOutButton.setClickable(false);
 
         mZoomOutButton.setOnClickListener(new View.OnClickListener() {
@@ -151,29 +183,27 @@ public class PdfViewerActivity extends AppCompatActivity {
                     pdfView.loadPages();
                 }
 
-                if (curZoom == 1f) {
+                if (pdfView.getZoom() == 1f) {
                     mZoomOutButton.setEnabled(false);
-                    mZoomOutButton.setAlpha(.5f);
+                    mZoomOutButton.setAlpha(.35f);
                     mZoomOutButton.setClickable(false);
 
-                    mZoomInButton.setEnabled(true);
-                    mZoomInButton.setAlpha(1f);
-                    mZoomInButton.setClickable(true);
                 } else
                 {
                     mZoomOutButton.setEnabled(true);
-                    mZoomOutButton.setAlpha(1f);
+                    mZoomOutButton.setAlpha(0.75f);
                     mZoomOutButton.setClickable(true);
 
-                    mZoomInButton.setEnabled(true);
-                    mZoomInButton.setAlpha(1f);
-                    mZoomInButton.setClickable(true);
                 }
+                mZoomInButton.setEnabled(true);
+                mZoomInButton.setAlpha(0.75f);
+                mZoomInButton.setClickable(true);
             }
         });
 
         //zmiana strony w lewo
-        mPageLeftButton = (Button) findViewById(R.id.pageLeft);
+        mPageLeftButton = findViewById(R.id.pageLeft);
+        mPageLeftButton.setAlpha(0.75f);
         mPageLeftButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -187,7 +217,8 @@ public class PdfViewerActivity extends AppCompatActivity {
 
 
         //zmiana strony w prawo
-        mPageRightButton = (Button) findViewById(R.id.pageRight);
+        mPageRightButton = findViewById(R.id.pageRight);
+        mPageRightButton.setAlpha(0.75f);
         mPageRightButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -213,7 +244,8 @@ public class PdfViewerActivity extends AppCompatActivity {
 
 
 
-        mFindBubblesButton = (Button) findViewById(R.id.findBubbles);
+        mFindBubblesButton = findViewById(R.id.findBubbles);
+        mFindBubblesButton.setAlpha(0.75f);
         mFindBubblesButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -227,14 +259,35 @@ public class PdfViewerActivity extends AppCompatActivity {
             }
         });
 
+        //tlumaczenie chmurki
+
+        mToggleBubbleTranslateButton = findViewById(R.id.toggleBubbleTranslate);
+        mToggleBubbleTranslateButton.setAlpha(0.75f);
+        mToggleBubbleTranslateButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View view) {
+                if (translateBubbleFlag) {
+                    mToggleBubbleTranslateButton.setAlpha(0.75f);
+                    translateBubbleFlag = false;
+                }
+                else {
+                    mToggleBubbleTranslateButton.setAlpha(1f);
+                    translateBubbleFlag = true;
+                }
+            }
+        });
+
         //czyszczenie chmurek
 
-        mClearBubblesButton = (Button) findViewById(R.id.clearBubbles);
+        mClearBubblesButton = findViewById(R.id.clearBubbles);
+        mClearBubblesButton.setAlpha(0.75f);
         mClearBubblesButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View view) {
                 translatedPages.remove(pdfView.getCurrentPage());
+                pdfView.invalidate();
             }
         });
     }
@@ -261,10 +314,6 @@ public class PdfViewerActivity extends AppCompatActivity {
         }
         return "";
     }
-
-
-
-
 
     class ExampleRunnable implements Runnable {
         int DDpi;
@@ -298,7 +347,7 @@ public class PdfViewerActivity extends AppCompatActivity {
                     public void run() {
                         //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
                         mFindBubblesButton.setEnabled(false);
-                        mFindBubblesButton.setAlpha(.5f);
+                        mFindBubblesButton.setAlpha(.35f);
                         mFindBubblesButton.setClickable(false);
                     }
                 });
@@ -309,10 +358,15 @@ public class PdfViewerActivity extends AppCompatActivity {
                 Log.d("THREAD_TEST", "startGenerateSpeechBubblesThread");
                 Page page2 = new Page(pdfPageAsBitmap);
                 List<Rectangle> speechBubbles;
-                speechBubbles = page2.generate_speech_bubbles(0.5, 0.5,
+                List<Rectangle> rejectedBubbles;
+                List<List<Rectangle>> allBubbles;
+                allBubbles = page2.generate_speech_bubbles(0.5, 0.5,
                         bubblesDetector, 0.2,
                         true, bubblesClassifier);
+                speechBubbles = allBubbles.get(0);
+                rejectedBubbles = allBubbles.get(1);
                 page2.setSpeech_bubbles(speechBubbles);
+                page2.setRejected_speech_bubbles(rejectedBubbles);
                 Log.d("THREAD_TEST", "endGenerateSpeechBubblesThread" + speechBubbles.toArray().length + speechBubbles);
 
 
@@ -331,9 +385,10 @@ public class PdfViewerActivity extends AppCompatActivity {
                     tess.recycle();
                 }
 
+                //translate accepted bubbles on page and add to speechBubblesRealXY
 
-                long conf = 0;
-                for (Rectangle bubble : speechBubbles) {
+                 for (Rectangle bubble : speechBubbles) {
+                    String tlum = translateBubble(bubble, page2, tess);
                     Bitmap bitmap = getTappedRectangleAsBitmap(bubble, page2);
                    // bitmap = getResizedBitmap(bitmap, (int) 1.2* bitmap.getWidth(), (int) 1.2* bitmap.getHeight());
 
@@ -384,14 +439,12 @@ public class PdfViewerActivity extends AppCompatActivity {
                     }
 
 
-                    conf += tess.meanConfidence();
                     String text2 = WordCheck.removeSingleChars(text);
                     Log.d("ocr", text + " " + text.length());
                     Log.d("ocr2", text2 + " " + text2.length());
 
                     Translator translator = new Translator();
                     WordCheck w2 = new WordCheck();
-                    String tlum = "";
                     try {
                         CountDownLatch countDownLatch = new CountDownLatch(1);
                         translator.run(text2, w2, countDownLatch);
@@ -402,17 +455,31 @@ public class PdfViewerActivity extends AppCompatActivity {
                         e.printStackTrace();
                     }
                     if (Objects.equals(tlum, "")) {continue;}
-                    if (tlum.equals(text2)) {continue;}
                     Rectangle rectangle_new = new Rectangle(
                             (int) (bubble.getStartX() / proportionMapping),
                             (int) (bubble.getStartY() / proportionMapping),
                             (int) (bubble.getEndX() / proportionMapping),
                             (int) (bubble.getEndY() / proportionMapping));
                     rectangle_new.setText(tlum);
+                    rectangle_new.setVisible(true);
+                    rectangle_new.setAccepted(true);
 
                     speechBubblesRealXY.add(rectangle_new);
                 }
-                Log.d("mean conf", String.valueOf(conf / speechBubbles.size()));
+
+                //dont translate rejected, only add to speechBubblesRealXY
+                for (Rectangle bubble : rejectedBubbles) {
+
+                    Rectangle rectangle_new = new Rectangle(
+                            (int) (bubble.getStartX() / proportionMapping),
+                            (int) (bubble.getStartY() / proportionMapping),
+                            (int) (bubble.getEndX() / proportionMapping),
+                            (int) (bubble.getEndY() / proportionMapping));
+                    rectangle_new.setVisible(false);
+                    rectangle_new.setAccepted(false);
+
+                    speechBubblesRealXY.add(rectangle_new);
+                }
 
                 threadHandler.post(new Runnable() {
                     @Override
@@ -420,11 +487,13 @@ public class PdfViewerActivity extends AppCompatActivity {
                         Log.d("THREAD_TEST", "startUIThread");
                         //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
                         mFindBubblesButton.setEnabled(true);
-                        mFindBubblesButton.setAlpha(1f);
+                        mFindBubblesButton.setAlpha(.75f);
                         mFindBubblesButton.setClickable(true);
                         page.setOrig_image(page2.getOrig_image());
                         page.setSpeech_bubbles(speechBubbles);
+                        page.setRejected_speech_bubbles(rejectedBubbles);
                         translatedPages.put(pageIdx, speechBubblesRealXY);
+                        pdfView.invalidate();
                         Log.d("THREAD_TEST", "endUIThread");
                     }
                 });
@@ -432,54 +501,40 @@ public class PdfViewerActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
+    }
+    //zmiana jednej strony pdfa na bitmape
+    private Bitmap pdfPageToBitmap(File pdfFile, int pageIdx) {
+        Bitmap bitmap = null;
+        try {
+            PdfRenderer renderer = new PdfRenderer(ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY));
+            PdfRenderer.Page page = renderer.openPage(pageIdx);
 
+            float onePageWidth = pdfView.getPageSize(pageIdx).getWidth();
+            float onePageHeight = pdfView.getPageSize(pageIdx).getHeight();
+            float wxhProportion = onePageWidth / onePageHeight;
+            int max_px = 13500000;
+            int width = (int) Math.floor(Math.sqrt(max_px * wxhProportion));
+            int height = (int) (width / wxhProportion);
+            Log.d("height and width", width + " x " + height);
+            Log.d("height * width", String.valueOf(width * height));
 
-        //zmiana jednej strony pdfa na bitmape
-        private Bitmap pdfPageToBitmap(File pdfFile, int pageIdx) {
-            Bitmap bitmap = null;
-            try {
-                PdfRenderer renderer = new PdfRenderer(ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY));
-                PdfRenderer.Page page = renderer.openPage(pageIdx);
+            bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 
-                float onePageWidth = pdfView.getPageSize(pageIdx).getWidth();
-                float onePageHeight = pdfView.getPageSize(pageIdx).getHeight();
-                float wxhProportion = onePageWidth / onePageHeight;
-                int max_px = 13500000;
-                int width = (int) Math.floor(Math.sqrt(max_px * wxhProportion));
-                int height = (int) (width / wxhProportion);
-                Log.d("height and width", width + " x " + height);
-                Log.d("height * width", String.valueOf(width * height));
+            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
 
-                bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            // close the page
+            page.close();
 
-                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
-
-                // close the page
-                page.close();
-
-                // close the renderer
-                renderer.close();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-            return bitmap;
+            // close the renderer
+            renderer.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
-    }
-
-    public static Bitmap getResizedBitmap(Bitmap bm, int newWidth,
-                                          int newHeight) {
-        final int w = bm.getWidth();
-        final int h = bm.getHeight();
-        final float sw = ((float) newWidth) / w;
-        final float sh = ((float) newHeight) / h;
-
-        Matrix matrix = new Matrix();
-        matrix.postScale(sw, sh);
-        return Bitmap.createBitmap(bm, 0, 0, w, h, matrix, false);
+        return bitmap;
     }
 
 
-    private Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
+    public static Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
         Rectangle resultRectangle = null;
 
         for (Rectangle rectangle : rectangles) {
@@ -533,50 +588,125 @@ public class PdfViewerActivity extends AppCompatActivity {
                 TextPaint textPaint = new TextPaint();
                 textPaint.setColor(Color.BLACK);
                 for (Rectangle bubble : translatedPages.get(pdfView.getCurrentPage())) {
-                    Log.d("Bubble", String.valueOf(bubble));
-                    int startX = (int) (bubble.getStartX() * pdfView.getZoom());
-                    int startY = (int) (bubble.getStartY() * pdfView.getZoom());
-                    int endX = (int) (bubble.getEndX() * pdfView.getZoom());
-                    int endY = (int) (bubble.getEndY() * pdfView.getZoom());
-                    canvas.drawRect(startX, startY, endX, endY, paintBG);
-                    RectF rect = new RectF(startX, startY, endX, endY);
-                    Rectangle rectangle = new Rectangle(startX, startY, endX, endY);
-                    rectangle.setText(bubble.getText());
-                    float fontSize = rectangle.getOptTextSize();
-                    textPaint.setTextSize(fontSize);
-                    StaticLayout sl = new StaticLayout(rectangle.getText(), textPaint,
-                            rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
-                            1, 1, false);
-                    canvas.save();
-                    canvas.translate(rect.left, rect.top);
-                    sl.draw(canvas);
-                    canvas.restore();
-
+                    if (bubble.isVisible()) {
+                        Log.d("Bubble", String.valueOf(bubble));
+                        int startX = (int) (bubble.getStartX() * pdfView.getZoom());
+                        int startY = (int) (bubble.getStartY() * pdfView.getZoom());
+                        int endX = (int) (bubble.getEndX() * pdfView.getZoom());
+                        int endY = (int) (bubble.getEndY() * pdfView.getZoom());
+                        canvas.drawRect(startX, startY, endX, endY, paintBG);
+                        RectF rect = new RectF(startX, startY, endX, endY);
+                        Rectangle rectangle = new Rectangle(startX, startY, endX, endY);
+                        rectangle.setText(bubble.getText());
+                        float fontSize = rectangle.getOptTextSize();
+                        textPaint.setTextSize(fontSize);
+                        StaticLayout sl = new StaticLayout(rectangle.getText(), textPaint,
+                                rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
+                                1, 1, false);
+                        canvas.save();
+                        canvas.translate(rect.left, rect.top);
+                        sl.draw(canvas);
+                        canvas.restore();
+                    }
+                    else {
+                        continue;
+                    }
                 }
             }
 
+//            int startX = (int) (236 * pdfView.getZoom());
+//            int startY = (int) (282 * pdfView.getZoom());
+//            int endX = (int) (546 * pdfView.getZoom());
+//            int endY = (int) (487 * pdfView.getZoom());
+//            Rectangle example_rectangle = new Rectangle(startX, startY, endX, endY);
+//            example_rectangle.setText("OH, HEY... HOW'S YOUR MOM? XDDD XD XDDD XDDDDD XD");
+//            //rectangle.updateOptSize()
+//            canvas.drawRect(startX, startY, endX, endY, paintBG);
+//
+//            RectF rect = new RectF(startX, startY, endX, endY);
+//            TextPaint textPaint = new TextPaint();
+//            float fontSize = example_rectangle.getOptTextSize();
+//            textPaint.setColor(Color.BLACK);
+//            textPaint.setTextSize(fontSize);
+//            StaticLayout sl = new StaticLayout(example_rectangle.getText(), textPaint,
+//                    example_rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
+//                    1, 1, false);
+//            Log.d("TextHeight", String.valueOf(sl.getHeight()));
+//            //canvas.save();
+//            canvas.translate(rect.left, rect.top);
+//            sl.draw(canvas);
+//            //canvas.restore();
+
+            // Use Color.parseColor to define HTML colors
+        }
+    }
+
+    class GetPageAsBitmapRunnable implements Runnable {
+        File file;
+        int pageIdx;
+        Page page;
+
+        Bitmap pdfPageAsBitmap2;
+
+        GetPageAsBitmapRunnable(File file, int pageIdx, Page page) {
+            this.file = file;
+            this.pageIdx = pageIdx;
+            this.page = page;
+        }
+
+        @Override
+        public void run() {
+            //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
+            Log.d("THREAD_TEST", "startThread");
+            try {
+                pdfPageAsBitmap2 = pdfPageToBitmap(file, pageIdx);
+                Page page2 = new Page(pdfPageAsBitmap2);
+
+                Handler threadHandler = new Handler(Looper.getMainLooper());
+
+                threadHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.d("THREAD_TEST", "startUIThread");
+                        //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
+                        page.setOrig_image(page2.getOrig_image());
+                        pdfPageAsBitmap = pdfPageAsBitmap2;
+                        Log.d("THREAD_TEST", "endUIThread");
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            Log.d("THREAD_TEST", "endThread");
         }
     }
 
     public class OnPageChangeListener implements com.github.barteksc.pdfviewer.listener.OnPageChangeListener {
         @Override
-        public void onPageChanged(int page, int pageCount) {
-            if (page == 0) {
+        public void onPageChanged(int pageIdx, int pageCount) {
+
+
+            //TODO: te dwie do threada. pamietac, ze to musi byc thread w threadzie xd
+            if (pageIdx != 0) {
+                GetPageAsBitmapRunnable runnable = new GetPageAsBitmapRunnable(file, pageIdx, page);
+                new Thread(runnable).start();
+            }
+            if (pageIdx == 0) {
                 mPageLeftButton.setEnabled(false);
-                mPageLeftButton.setAlpha(.5f);
+                mPageLeftButton.setAlpha(.35f);
                 mPageLeftButton.setClickable(false);
             } else {
                 mPageLeftButton.setEnabled(true);
-                mPageLeftButton.setAlpha(1f);
+                mPageLeftButton.setAlpha(.75f);
                 mPageLeftButton.setClickable(true);
             }
-            if (page == (pageCount - 1)) {
+            if (pageIdx == (pageCount - 1)) {
                 mPageRightButton.setEnabled(false);
-                mPageRightButton.setAlpha(.5f);
+                mPageRightButton.setAlpha(.35f);
                 mPageRightButton.setClickable(false);
             } else {
                 mPageRightButton.setEnabled(true);
-                mPageRightButton.setAlpha(1f);
+                mPageRightButton.setAlpha(.75f);
                 mPageRightButton.setClickable(true);
             }
         }
@@ -656,27 +786,43 @@ public class PdfViewerActivity extends AppCompatActivity {
             Log.d("ONTAPTEST", "thisPageX = " + thisPageX + " | mappedY = " + mappedY);
             Log.d("ONTAPTEST", "thisPageXRealScale = " + thisPageXRealScale + " | thisPageYRealScale = " + thisPageYRealScale);
 
-            try {
-                float pageDetectorHeight = page.getOrig_image().rows();
-                float pageDetectorWidth = page.getOrig_image().cols();
-                Log.d("TESTWYKRYCIA", "pageDetectorHeight = " + pageDetectorHeight + " | pageDetectorWidth = " + pageDetectorWidth);
+            if (translateBubbleFlag) {
+                try {
+                    Rectangle foundBubble = tappedRectangle(translatedPages.get(pageIdx), thisPageXRealScale, thisPageYRealScale);
+                    Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
 
-                float proportionDetector = pageDetectorWidth / pageDetectorHeight;
-                float proportion = onePageWidth / onePageHeight;
-                Log.d("TESTWYKRYCIA", "proportionDetector = " + proportionDetector + " | proportion = " + proportion);
 
-                float proportionMapping = pageDetectorHeight / onePageHeight;
-                Log.d("TESTWYKRYCIA", "proportionMapping = " + proportionMapping);
+                    //jezeli visible to invis, i na odwrot
+                    foundBubble.setVisible(!foundBubble.isVisible());
 
-                Rectangle foundBubble = tappedRectangle(page.getSpeech_bubbles(), thisPageXRealScale * proportionMapping, thisPageYRealScale * proportionMapping);
-                /*foundBubble.setStartX((int) (foundBubble.getStartX() / proportionMapping));
-                foundBubble.setStartY((int) (foundBubble.getStartY() / proportionMapping));
-                foundBubble.setEndX((int) (foundBubble.getEndX() / proportionMapping));
-                foundBubble.setEndY((int) (foundBubble.getEndY() / proportionMapping));*/
-                Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
-            } catch (Exception exception) {
-                Log.d("TESTWYKRYCIA", String.valueOf(exception));
+                    //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
+                    if (Objects.isNull(foundBubble.getText())) {
+                        String pathTesseract = getPathTess("eng.traineddata", getContext());
+                        TessBaseAPI tess = new TessBaseAPI();
+
+                        if (!tess.init(pathTesseract, "eng")) {
+                            Log.d("TESTTESSERACT", "nie dziala");
+                            // Error initializing Tesseract (wrong data path or language)
+                            tess.recycle();
+                        }
+
+                        float pageDetectorHeight = page.getOrig_image().rows();
+                        float onePageHeight2 = pdfView.getPageSize(pageIdx).getHeight();
+                        float proportion = pageDetectorHeight / onePageHeight2;
+                        Rectangle tappedRect = new Rectangle((int) (foundBubble.getStartX() * proportion), (int) (foundBubble.getStartY() * proportion), (int) (foundBubble.getEndX() * proportion), (int) (foundBubble.getEndY() * proportion));
+                        String translatedText = translateBubble(tappedRect, page, tess);
+                        Log.d("translatedText", translatedText);
+                        foundBubble.setText(translatedText);
+                        Log.d("setText", foundBubble.getText());
+                    }
+
+
+                } catch (Exception exception) {
+                    Log.d("TESTWYKRYCIA", String.valueOf(exception));
+                }
             }
+
+            pdfView.invalidate();
 
             return false;
         }
@@ -694,6 +840,28 @@ public class PdfViewerActivity extends AppCompatActivity {
             }
             Log.d("TEST_CUMX", String.valueOf(cumXOffset));
         }
+    }
+
+    private String translateBubble(Rectangle bubble, Page page, TessBaseAPI tess) {
+        Bitmap bitmap = getTappedRectangleAsBitmap(bubble, page);
+
+        tess.setImage(bitmap);
+        String text = tess.getUTF8Text();
+        String text2 = WordCheck.removeSingleChars(text);
+
+        Translator translator = new Translator();
+        WordCheck w2 = new WordCheck();
+        String tlum = "";
+        try {
+            CountDownLatch countDownLatch = new CountDownLatch(1);
+            translator.run(text2, w2, countDownLatch);
+            countDownLatch.await();
+            tlum = w2.getTest();
+            Log.d("tlum", tlum);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return tlum;
     }
 
 

@@ -21,6 +21,7 @@ import java.util.stream.IntStream;
 public class Page {
     private Mat orig_image;
     private List<Rectangle> speech_bubbles;
+    private List<Rectangle> rejected_speech_bubbles;
 
     public Page(Mat orig_image) {
         this.orig_image = orig_image;
@@ -32,6 +33,10 @@ public class Page {
 
     public void setSpeech_bubbles(List<Rectangle> speech_bubbles) {
         this.speech_bubbles = speech_bubbles;
+    }
+
+    public List<Rectangle> getSpeech_bubbles() {
+        return speech_bubbles;
     }
 
     public Page(Bitmap bmp) {
@@ -66,16 +71,21 @@ public class Page {
         this.orig_image = mat;
     }
 
-    public List<Rectangle> getSpeech_bubbles() {
-        return speech_bubbles;
+    public List<Rectangle> getRejected_speech_bubbles() {
+        return rejected_speech_bubbles;
     }
 
-    public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
+    public void setRejected_speech_bubbles(List<Rectangle> rejected_speech_bubbles) {
+        this.rejected_speech_bubbles = rejected_speech_bubbles;
+    }
+
+
+    public List<List<Rectangle>> generate_speech_bubbles(double min_confidence, double scale,
                                         BubblesDetector bubblesDetector) {
         return generate_speech_bubbles(min_confidence, scale, bubblesDetector, 0.2);
     }
 
-    public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
+    public List<List<Rectangle>> generate_speech_bubbles(double min_confidence, double scale,
                                         BubblesDetector bubblesDetector, double percentage_bigger_frames) {
         int W = this.orig_image.cols();
         int H = this.orig_image.rows();
@@ -85,7 +95,7 @@ public class Page {
                 bigger_frame_Wpx, bigger_frame_Hpx, false, null);
     }
 
-    public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
+    public List<List<Rectangle>> generate_speech_bubbles(double min_confidence, double scale,
                                                    BubblesDetector bubblesDetector,
                                                    double percentage_bigger_frames,
                                                    boolean use_classifier,
@@ -99,7 +109,7 @@ public class Page {
     }
 
 
-    public List<Rectangle> generate_speech_bubbles(double min_confidence, double scale,
+    public List<List<Rectangle>> generate_speech_bubbles(double min_confidence, double scale,
                                                    BubblesDetector bubblesDetector,
                                                    int bigger_frame_Wpx, int bigger_frame_Hpx,
                                                    boolean use_classifier,
@@ -183,7 +193,7 @@ public class Page {
         save_with_speech_bubbles(output_path, 3);
     }
 
-    public List<Rectangle> remove_classified_as_not_bubbles(BubblesClassifier bubblesClassifier,
+    public List<List<Rectangle>> remove_classified_as_not_bubbles(BubblesClassifier bubblesClassifier,
                                                             List<Rectangle> bubbles_to_classify) {
         // making copy of bubbles_to_classify
         List<Rectangle> bubbles_copy = new ArrayList<>();
@@ -226,7 +236,10 @@ public class Page {
             }
         }
         bubbles_copy.removeAll(not_bubbles);
-        return bubbles_copy;
+        List<List<Rectangle>> all_rectangles = new ArrayList<>();
+        all_rectangles.add(bubbles_copy);
+        all_rectangles.add(not_bubbles);
+        return all_rectangles;
     }
 
     public void save_with_speech_bubbles(String output_path, int thickness) {
@@ -260,12 +273,16 @@ public class Page {
         return bitmap;
     }
 
-    private List<Rectangle> makeBiggerRectangles(List<Rectangle> rectangles,
+    private List<List<Rectangle>> makeBiggerRectangles(List<Rectangle> rectangles,
                                                  int Wpx_more, int Hpx_more,
                                                  boolean use_classifier,
                                                  BubblesClassifier bubblesClassifier) {
+
+        List<List<Rectangle>> rectangles_result = new ArrayList<>();
         if (rectangles.size() == 0) {
-            return rectangles;
+            rectangles_result.add(rectangles);
+            rectangles_result.add(new ArrayList<>());
+            return rectangles_result;
         }
         int num_of_beginning_rects = rectangles.toArray().length;
         List<Integer> rectangle_cluster = IntStream.range(0, num_of_beginning_rects)
@@ -366,10 +383,17 @@ public class Page {
         }
 
         if (use_classifier) {
-            bigger_rectangles = this.remove_classified_as_not_bubbles(bubblesClassifier, bigger_rectangles);
+            List<List<Rectangle>> all_rectangles = this.remove_classified_as_not_bubbles(
+                    bubblesClassifier, bigger_rectangles
+            );
+            rectangles_result.add(all_rectangles.get(0));
+            rectangles_result.add(all_rectangles.get(1));
+        } else {
+            rectangles_result.add(bigger_rectangles);
+            rectangles_result.add(new ArrayList<>());
         }
 
-        return bigger_rectangles;
+        return rectangles_result;
     }
 
 }
