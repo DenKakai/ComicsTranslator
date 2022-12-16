@@ -1,76 +1,48 @@
 package com.example.pdfreader2;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.viewpager.widget.ViewPager;
-
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
-import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.pdf.PdfRenderer;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
-import android.provider.MediaStore;
-import android.provider.Settings;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.Toast;
-import android.os.Process;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.github.barteksc.pdfviewer.PDFView;
-import com.github.barteksc.pdfviewer.listener.Callbacks;
-import com.github.barteksc.pdfviewer.listener.OnDrawListener;
-import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
-import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.googlecode.tesseract.android.TessBaseAPI;
-import com.shockwave.pdfium.util.SizeF;
+
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
-
-import org.opencv.android.Utils;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
-import org.opencv.core.Rect;
-import org.opencv.imgproc.Imgproc;
 
 
 public class PdfViewerActivity extends AppCompatActivity{
@@ -614,30 +586,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                 }
             }
 
-//            int startX = (int) (236 * pdfView.getZoom());
-//            int startY = (int) (282 * pdfView.getZoom());
-//            int endX = (int) (546 * pdfView.getZoom());
-//            int endY = (int) (487 * pdfView.getZoom());
-//            Rectangle example_rectangle = new Rectangle(startX, startY, endX, endY);
-//            example_rectangle.setText("OH, HEY... HOW'S YOUR MOM? XDDD XD XDDD XDDDDD XD");
-//            //rectangle.updateOptSize()
-//            canvas.drawRect(startX, startY, endX, endY, paintBG);
-//
-//            RectF rect = new RectF(startX, startY, endX, endY);
-//            TextPaint textPaint = new TextPaint();
-//            float fontSize = example_rectangle.getOptTextSize();
-//            textPaint.setColor(Color.BLACK);
-//            textPaint.setTextSize(fontSize);
-//            StaticLayout sl = new StaticLayout(example_rectangle.getText(), textPaint,
-//                    example_rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
-//                    1, 1, false);
-//            Log.d("TextHeight", String.valueOf(sl.getHeight()));
-//            //canvas.save();
-//            canvas.translate(rect.left, rect.top);
-//            sl.draw(canvas);
-//            //canvas.restore();
 
-            // Use Color.parseColor to define HTML colors
         }
     }
 
