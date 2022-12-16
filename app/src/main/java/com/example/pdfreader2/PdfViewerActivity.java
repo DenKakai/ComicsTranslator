@@ -1,60 +1,36 @@
 package com.example.pdfreader2;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.viewpager.widget.ViewPager;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.pdf.PdfRenderer;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
-import android.provider.MediaStore;
-import android.provider.Settings;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.Toast;
-import android.os.Process;
 
 import com.github.barteksc.pdfviewer.PDFView;
-import com.github.barteksc.pdfviewer.listener.Callbacks;
-import com.github.barteksc.pdfviewer.listener.OnDrawListener;
-import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
-import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.googlecode.tesseract.android.TessBaseAPI;
-import com.shockwave.pdfium.util.SizeF;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -64,9 +40,6 @@ import java.util.concurrent.CountDownLatch;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
-import org.opencv.core.Rect;
-import org.opencv.imgproc.Imgproc;
 
 
 public class PdfViewerActivity extends AppCompatActivity{
@@ -289,6 +262,8 @@ public class PdfViewerActivity extends AppCompatActivity{
 
     // Upload file to storage and return a path.
     private static String getPath(String file, Context context) {
+        //okazalo sie, ze to jest sciezka do assetow: context.getFilesDir().getAbsolutePath()
+        /*
         AssetManager assetManager = context.getAssets();
         BufferedInputStream inputStream = null;
         try {
@@ -306,8 +281,8 @@ public class PdfViewerActivity extends AppCompatActivity{
             return outFile.getAbsolutePath();
         } catch (IOException ex) {
             Log.i("TAG", "Failed to upload a file");
-        }
-        return "";
+        }*/
+        return context.getFilesDir().getAbsolutePath() + "/" + file;
     }
 
     class ExampleRunnable implements Runnable {
@@ -371,7 +346,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                 float proportionMapping = pageDetectorWidth / onePageWidth;
 
                 List<Rectangle> speechBubblesRealXY = new ArrayList<>();
-                String pathTesseract = getPathTess("eng.traineddata", getContext());
+                String pathTesseract = getPathTess("tessdata", getContext());
                 TessBaseAPI tess = new TessBaseAPI();
 
                 if (!tess.init(pathTesseract, "eng")) {
@@ -476,7 +451,7 @@ public class PdfViewerActivity extends AppCompatActivity{
     }
 
     private static String getPathTess(String file, Context context) {
-        AssetManager assetManager = context.getAssets();
+        /*AssetManager assetManager = context.getAssets();
         BufferedInputStream inputStream = null;
         try {
             // Read data from assets.
@@ -496,8 +471,8 @@ public class PdfViewerActivity extends AppCompatActivity{
             return context.getFilesDir().getAbsolutePath();
         } catch (IOException ex) {
             Log.i("TAG", "Failed to upload a file");
-        }
-        return "";
+        }*/
+        return context.getFilesDir().getAbsolutePath();
     }
 
     private Context getContext() {
@@ -653,14 +628,15 @@ public class PdfViewerActivity extends AppCompatActivity{
         Bitmap bitmap = Bitmap.createBitmap(croppedMat.cols(), croppedMat.rows(), Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(croppedMat, bitmap);
 
-        Log.d("zapis", "proba zapisu");
+        /*Log.d("zapis", "proba zapisu");
         try (FileOutputStream out = new FileOutputStream("a")) {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+            Log.d("zapis", "udany");
         } catch (IOException e) {
             e.printStackTrace();
-        }
-        Log.d("zapis", "udany");
+        }*/
 
+        Log.d("zapis", "bitmapa textu sczytana");
         return bitmap;
     }
 
@@ -726,7 +702,7 @@ public class PdfViewerActivity extends AppCompatActivity{
 
                     //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
                     if (Objects.isNull(foundBubble.getText())) {
-                        String pathTesseract = getPathTess("eng.traineddata", getContext());
+                        String pathTesseract = getPathTess("tessdata", getContext());
                         TessBaseAPI tess = new TessBaseAPI();
 
                         if (!tess.init(pathTesseract, "eng")) {

@@ -47,4 +47,6 @@ dependencies {
     implementation 'cz.adaptech.tesseract4android:tesseract4android:4.2.0'
 
     implementation 'commons-io:commons-io:2.6'
+
+    implementation 'com.tom-roush:pdfbox-android:1.8.10.3'
 }
