@@ -1,5 +1,8 @@
 package com.example.pdfreader2;
 
+import static java.lang.Character.isDigit;
+import static java.lang.Character.isLetter;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -21,9 +24,31 @@ public class WordCheck {
         String[] words_array = result.split(" ");
         List<String> words_list = new ArrayList<String>();
         for (String i : words_array) {
-            if(i.length()==1 & !i.toUpperCase().equals("I") & !i.toUpperCase().equals("A") & !i.toUpperCase().equals("O")) {
+            StringBuilder cur_str = new StringBuilder();
+            String cleared_word = "";
+            for (int j = 0; j < i.length(); j++) {
+                char cur_char = i.charAt(j);
+                if (cur_char == '|') {cur_char = 'I';}
+                if (cur_char == '’') {cur_char = '\'';}
+                if (isLetter(cur_char)) {
+                    cur_str.append(cur_char);
+                    continue;
+                }
+                if (isDigit(cur_char)) {
+                    cur_str.append(cur_char);
+                    continue;
+                }
+                if (cur_char == '.' | cur_char == '\'' | cur_char == '-' | cur_char == ',' | cur_char == '?' | cur_char == '!') {
+                    cur_str.append(cur_char);
+                    continue;
+                }
+            }
+            cleared_word = cur_str.toString();
+            if (cleared_word.length() == 1 & !cleared_word.toUpperCase().equals("I") & !cleared_word.toUpperCase().equals("A") & !cleared_word.toUpperCase().equals("O")) {
                 continue;
-            } words_list.add(i);
+            }
+            if (cleared_word.chars().filter(ch -> isLetter(ch)).count() == 1) {continue;}
+            words_list.add(cleared_word);
         }
         StringBuilder builder = new StringBuilder();
         for (String ch : words_list) {
