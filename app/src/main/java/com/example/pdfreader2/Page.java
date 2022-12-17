@@ -1,6 +1,7 @@
 package com.example.pdfreader2;
 
 import android.graphics.Bitmap;
+import android.util.Log;
 
 import org.opencv.android.Utils;
 import org.opencv.core.*;
@@ -359,6 +360,16 @@ public class Page {
 
         bigger_rectangles.removeAll(rectangles_to_del);
 
+        // making frames a little bit bigger
+
+        for (Rectangle rect : bigger_rectangles) {
+            rect.setStartX(rect.getStartX() - Wpx_more);
+            rect.setStartY(rect.getStartY() - Hpx_more);
+            rect.setEndX(rect.getEndX() + Wpx_more);
+            rect.setEndY(rect.getEndY() + Hpx_more);
+        }
+
+
         //making smaller rectangles if they are stick out of image
 
         for (int i = 0; i < bigger_rectangles.size(); i++) {
@@ -371,15 +382,6 @@ public class Page {
             } if (bigger_rectangles.get(i).getEndY() < 0) {
                 bigger_rectangles.get(i).setEndY(0);
             }
-        }
-
-        // making frames a little bit bigger
-
-        for (Rectangle rect : bigger_rectangles) {
-            rect.setStartX(rect.getStartX() - Wpx_more);
-            rect.setStartY(rect.getStartY() - Hpx_more);
-            rect.setEndX(rect.getEndX() + Wpx_more);
-            rect.setEndY(rect.getEndY() + Hpx_more);
         }
 
         if (use_classifier) {
