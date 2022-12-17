@@ -1,36 +1,62 @@
 package com.example.pdfreader2;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.viewpager.widget.ViewPager;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
+import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.pdf.PdfRenderer;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
+import android.provider.MediaStore;
+import android.provider.Settings;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.Toast;
+import android.os.Process;
 
 import com.github.barteksc.pdfviewer.PDFView;
+import com.github.barteksc.pdfviewer.listener.Callbacks;
+import com.github.barteksc.pdfviewer.listener.OnDrawListener;
+import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
+import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.googlecode.tesseract.android.TessBaseAPI;
+import com.shockwave.pdfium.util.SizeF;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +66,9 @@ import java.util.concurrent.CountDownLatch;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.Rect;
+import org.opencv.imgproc.Imgproc;
 
 
 public class PdfViewerActivity extends AppCompatActivity{
@@ -358,7 +387,71 @@ public class PdfViewerActivity extends AppCompatActivity{
                 //translate accepted bubbles on page and add to speechBubblesRealXY
                 for (Rectangle bubble : speechBubbles) {
                     String tlum = translateBubble(bubble, page2, tess);
+                    Bitmap bitmap = getTappedRectangleAsBitmap(bubble, page2);
+                   // bitmap = getResizedBitmap(bitmap, (int) 1.2* bitmap.getWidth(), (int) 1.2* bitmap.getHeight());
 
+//                    Mat source = new Mat();
+//                    Utils.bitmapToMat(bitmap, source);
+//                    Mat destination = new Mat(source.rows(),source.cols(),source.type());
+//                    int erosion_size = 0;
+//                    Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(2*erosion_size + 1, 2*erosion_size+1));
+//                    Imgproc.erode(source, destination, element);
+//                    Utils.matToBitmap(destination, bitmap);
+//
+//                    int dilation_size = 0;
+//                    destination = source;
+//                    Mat element1 = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new  Size(2*dilation_size + 1, 2*dilation_size+1));
+//                    Imgproc.dilate(source, destination, element1);
+
+
+                    Paint paint = new Paint();
+                    Canvas canvas = new Canvas(bitmap);
+                    ColorMatrix cm = new ColorMatrix();
+                    float a = 77f;
+                    float b = 151f;
+                    float c = 28f;
+                    float t = 120 * -256f;
+                    cm.set(new float[] { a, b, c, 0, t, a, b, c, 0, t, a, b, c, 0, t, 0, 0, 0, 1, 0 });
+                    paint.setColorFilter(new ColorMatrixColorFilter(cm));
+                    canvas.drawBitmap(bitmap, 0, 0, paint);
+                    Bitmap bitmap2 = getTappedRectangleAsBitmap(bubble, page2);
+
+
+
+
+
+                    tess.setImage(bitmap);
+                    String text_1 = tess.getUTF8Text();
+                    int c1 = tess.meanConfidence();
+
+                    tess.setImage(bitmap2);
+                    String text_2 = tess.getUTF8Text();
+                    int c2 = tess.meanConfidence();
+                    Log.d("confidence", c1 + " " + c2);
+
+                    String text = "";
+                    if (c2 > c1) {
+                        text = text_2;
+                    } else {
+                        text = text_1;
+                    }
+
+
+                    String text2 = WordCheck.removeSingleChars(text);
+                    Log.d("ocr", text + " " + text.length());
+                    Log.d("ocr2", text2 + " " + text2.length());
+
+                    Translator translator = new Translator();
+                    WordCheck w2 = new WordCheck();
+                    try {
+                        CountDownLatch countDownLatch = new CountDownLatch(1);
+                        translator.run(text2, w2, countDownLatch);
+                        countDownLatch.await();
+                        tlum = w2.getTest();
+                        Log.d("tlum", tlum + " " + tlum.length());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     if (Objects.equals(tlum, "")) {continue;}
                     Rectangle rectangle_new = new Rectangle(
                             (int) (bubble.getStartX() / proportionMapping),
@@ -437,6 +530,7 @@ public class PdfViewerActivity extends AppCompatActivity{
         }
         return bitmap;
     }
+
 
     public static Rectangle tappedRectangle(List<Rectangle> rectangles, float x, float y) {
         Rectangle resultRectangle = null;
@@ -518,30 +612,7 @@ public class PdfViewerActivity extends AppCompatActivity{
                 }
             }
 
-//            int startX = (int) (236 * pdfView.getZoom());
-//            int startY = (int) (282 * pdfView.getZoom());
-//            int endX = (int) (546 * pdfView.getZoom());
-//            int endY = (int) (487 * pdfView.getZoom());
-//            Rectangle example_rectangle = new Rectangle(startX, startY, endX, endY);
-//            example_rectangle.setText("OH, HEY... HOW'S YOUR MOM? XDDD XD XDDD XDDDDD XD");
-//            //rectangle.updateOptSize()
-//            canvas.drawRect(startX, startY, endX, endY, paintBG);
-//
-//            RectF rect = new RectF(startX, startY, endX, endY);
-//            TextPaint textPaint = new TextPaint();
-//            float fontSize = example_rectangle.getOptTextSize();
-//            textPaint.setColor(Color.BLACK);
-//            textPaint.setTextSize(fontSize);
-//            StaticLayout sl = new StaticLayout(example_rectangle.getText(), textPaint,
-//                    example_rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
-//                    1, 1, false);
-//            Log.d("TextHeight", String.valueOf(sl.getHeight()));
-//            //canvas.save();
-//            canvas.translate(rect.left, rect.top);
-//            sl.draw(canvas);
-//            //canvas.restore();
 
-            // Use Color.parseColor to define HTML colors
         }
     }
 
