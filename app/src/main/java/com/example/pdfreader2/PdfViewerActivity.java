@@ -117,7 +117,6 @@ public class PdfViewerActivity extends AppCompatActivity{
         pdfView.setMidZoom(2f);
 
         //TODO: zoomout ma nie przecuac ekranu do dolnego lewego rogu, a zoomin ma nie przerzucac do gornego lewego rogu
-        //TODO: po tym jak sie zrobi clearbubbles/findbubbles i sie dopisza do slownika, to nie wyswietlaja sie dopooki nie wykona sie jeszcze raz ondraw. trzeba to jakos wymusic
 
         //przyblizenie
         mZoomInButton = findViewById(R.id.zoomIn);
@@ -555,7 +554,6 @@ public class PdfViewerActivity extends AppCompatActivity{
             inputStream.close();
             // Create copy file in storage.
             Log.d("testPlikuTesss", context.getFilesDir() + "/tessdata");
-            //TODO: sprawdzi czy mkdir jest konieczny, moze samo outFile wystarczy a jak nie, to dodac ifa na sprawdzanie czy ten folder istnieje
             new File(context.getFilesDir() + "/tessdata").mkdirs();
             File outFile = new File(context.getFilesDir() + "/tessdata", file);
             FileOutputStream os = new FileOutputStream(outFile);
