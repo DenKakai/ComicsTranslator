@@ -71,7 +71,7 @@ import org.opencv.core.Rect;
 import org.opencv.imgproc.Imgproc;
 
 
-public class PdfViewerActivity extends AppCompatActivity{
+public class PdfViewerActivity extends AppCompatActivity implements ExampleDialog.ExampleDialogListener{
 
     private PDFView pdfView;
     private ImageButton mZoomInButton;
@@ -81,6 +81,7 @@ public class PdfViewerActivity extends AppCompatActivity{
     private ImageButton mFindBubblesButton;
     private ImageButton mClearBubblesButton;
     private ImageButton mToggleBubbleTranslateButton;
+    private ImageButton mJumpToPageButton;
 
     private Page page = new Page();
     private ArrayList<Bitmap> pdfAsListOfBitmaps;
@@ -286,6 +287,28 @@ public class PdfViewerActivity extends AppCompatActivity{
                 pdfView.invalidate();
             }
         });
+
+        //skok strony
+
+        mJumpToPageButton = findViewById(R.id.jumpToPage);
+        mJumpToPageButton.setAlpha(0.75f);
+        mJumpToPageButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View view) {
+                openDialog();
+            }
+        });
+    }
+
+    public void openDialog() {
+        ExampleDialog exampleDialog = new ExampleDialog(1, pdfView.getPageCount(), pdfView.getCurrentPage() + 1);
+        exampleDialog.show(getSupportFragmentManager(), "example dialog");
+    }
+
+    @Override
+    public void applyTexts(int pageNumber) {
+        pdfView.jumpTo(pageNumber - 1);
     }
 
     // Upload file to storage and return a path.

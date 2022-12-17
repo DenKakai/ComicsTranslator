@@ -88,6 +88,15 @@
                 android:background="@drawable/roundcorner"
                 android:src="@drawable/ic_baseline_layers_clear_24" />
 
+            <ImageButton
+                android:id="@+id/jumpToPage"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_gravity="center"
+                android:background="@drawable/roundcorner"
+                android:src="@drawable/ic_baseline_find_in_page_24" />
+
         </LinearLayout>
 
 
