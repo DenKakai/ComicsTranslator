@@ -118,6 +118,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         pdfView.setMidZoom(2f);
 
         //TODO: zoomout ma nie przecuac ekranu do dolnego lewego rogu, a zoomin ma nie przerzucac do gornego lewego rogu
+        //TODO: naprawic, ze niezawsze dobrze sie wyszarza
 
         //przyblizenie
         mZoomInButton = findViewById(R.id.zoomIn);
@@ -314,7 +315,6 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
     // Upload file to storage and return a path.
     private static String getPath(String file, Context context) {
         //okazalo sie, ze to jest sciezka do assetow: context.getFilesDir().getAbsolutePath()
-
         AssetManager assetManager = context.getAssets();
         BufferedInputStream inputStream = null;
         try {
