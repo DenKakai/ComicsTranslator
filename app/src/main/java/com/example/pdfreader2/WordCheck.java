@@ -3,9 +3,12 @@ package com.example.pdfreader2;
 import static java.lang.Character.isDigit;
 import static java.lang.Character.isLetter;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 public class WordCheck {
     String test;
@@ -59,11 +62,11 @@ public class WordCheck {
         return str;
     }
 
-    public static String words_position(String result, String boxes) {
+    public static List<Rectangle> words_position(String result, String boxes) {
         String[] words_list = result.split(" ");
         List<String> boxes_list = Arrays.asList(boxes.split("\n"));
-        int it =0;
-        String words_position = "";
+        int it = 0;
+        List<Rectangle> resultList = new ArrayList<>();
         for (String cur_word : words_list) {
 
             int cur_word_length = cur_word.length();
@@ -80,15 +83,14 @@ public class WordCheck {
             String last_char = boxes_list.get(it + cur_word_length -1);
             String[] last_char_coordinates = last_char.split(" ");
 
-            String word = cur_word + " " + first_char_coordinates[1] + " " + first_char_coordinates[2]
-                    + " " + last_char_coordinates[3] +  " " + last_char_coordinates[4];
-            word += "\n";
-            words_position += word;
+            Rectangle tmp = new Rectangle(Integer.parseInt(first_char_coordinates[1]), Integer.parseInt(first_char_coordinates[2]), Integer.parseInt(last_char_coordinates[3]), Integer.parseInt(last_char_coordinates[4]));
+            Log.d("Pawlak", String.valueOf(tmp) + " | " + cur_word);
+            tmp.setText(cur_word);
 
-
+            resultList.add(tmp);
             it+=cur_word_length;
         }
-        return words_position;
+        return resultList;
     }
 
 }

@@ -92,6 +92,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
     File file;
     Bitmap pdfPageAsBitmap;
     boolean translateBubbleFlag = false;
+    boolean translateWordFlag = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -284,8 +285,16 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
             @Override
             public void onClick(View view) {
-                translatedPages.remove(pdfView.getCurrentPage());
-                pdfView.invalidate();
+                //translatedPages.remove(pdfView.getCurrentPage());
+                //pdfView.invalidate();
+                if (translateBubbleFlag) {
+                    mClearBubblesButton.setAlpha(0.75f);
+                    translateWordFlag = false;
+                }
+                else {
+                    mClearBubblesButton.setAlpha(1f);
+                    translateWordFlag = true;
+                }
             }
         });
 
@@ -444,6 +453,12 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
                     tess.setImage(bitmap);
                     String text_1 = tess.getUTF8Text();
+                    List<Rectangle> test = WordCheck.words_position(text_1, tess.getBoxText(0));
+                    //TODO:podzielic przez proportion mapping "test"
+
+
+
+
                     int c1 = tess.meanConfidence();
 
                     tess.setImage(bitmap2);
