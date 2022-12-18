@@ -440,12 +440,12 @@ public class Page {
         for (int i = 0; i < bigger_rectangles.size(); i++) {
             if (bigger_rectangles.get(i).getStartX() < 0) {
                 bigger_rectangles.get(i).setStartX(0);
-            } if (bigger_rectangles.get(i).getStartY() > this.orig_image.rows()) {
-                bigger_rectangles.get(i).setStartY(this.orig_image.rows());
+            } if (bigger_rectangles.get(i).getStartY() < 0) {
+                bigger_rectangles.get(i).setStartY(0);
             } if (bigger_rectangles.get(i).getEndX() > this.orig_image.cols()) {
                 bigger_rectangles.get(i).setEndX(this.orig_image.cols());
-            } if (bigger_rectangles.get(i).getEndY() < 0) {
-                bigger_rectangles.get(i).setEndY(0);
+            } if (bigger_rectangles.get(i).getEndY() > this.orig_image.rows()) {
+                bigger_rectangles.get(i).setEndY(this.orig_image.rows());
             }
         }
 

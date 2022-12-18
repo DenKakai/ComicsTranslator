@@ -381,7 +381,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 List<Rectangle> speechBubbles;
                 List<Rectangle> rejectedBubbles;
                 List<List<Rectangle>> allBubbles;
-                allBubbles = page2.generate_speech_bubbles(0.5, 0.36,
+                allBubbles = page2.generate_speech_bubbles(0.5, 0.5 /*0.36*/,
                         bubblesDetector, 0.2,
                         true, bubblesClassifier);
                 speechBubbles = allBubbles.get(0);
@@ -534,8 +534,8 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
             float onePageWidth = pdfView.getPageSize(pageIdx).getWidth();
             float onePageHeight = pdfView.getPageSize(pageIdx).getHeight();
             float wxhProportion = onePageWidth / onePageHeight;
-            //int max_px = 13500000;
-            int max_px = 27000000;
+            int max_px = 13500000;
+            //int max_px = 27000000;
             int width = (int) Math.floor(Math.sqrt(max_px * wxhProportion));
             int height = (int) (width / wxhProportion);
             Log.d("height and width", width + " x " + height);
