@@ -12,9 +12,15 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.ml.ANN_MLP;
 
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -125,6 +131,7 @@ public class Page {
         double rW = W / (double) newW;
         double rH = H / (double) newH;
         Size sz = new Size(newW, newH);
+        Log.d("wymiary", "po skali:" + newW + " x " + newH);
         Imgproc.resize(image, image, sz);
         H = image.rows();
         Size siz = new Size(image.cols(), H);
@@ -206,12 +213,70 @@ public class Page {
         Mat image = new Mat();
         List<Rectangle> not_bubbles = new ArrayList<>();
         this.orig_image.copyTo(image);
+        Log.d("wymiary", "w klasyfikatorze:" + image.cols() + " x " + image.rows());
         Mat datasetHist = new Mat();
 
         for (int i = 0; i < bubbles_copy.size(); i ++) {
             Rectangle speech_bubble = bubbles_copy.get(i);
             Mat croppedMat = image.submat(speech_bubble.getStartY(), speech_bubble.getEndY(),
                     speech_bubble.getStartX(), speech_bubble.getEndX());
+
+            // place for setting background color
+
+            Log.d("kolory_tla", "start");
+
+            Map<String, Integer> colors;
+            colors = new HashMap<>();
+            int count_white = 0;
+            for (int j = 0; j < croppedMat.rows(); j=j+10) { // height
+                for (int k = 0; k < croppedMat.cols(); k=k+10) {
+                    int count;
+                    int red = (int) croppedMat.get(j, k)[0];
+                    int green = (int) croppedMat.get(j, k)[1];
+                    int blue = (int) croppedMat.get(j, k)[2];
+                    if (red < 25 & green < 25 & blue < 25) { continue; }
+                    if (red > 220 & green > 220 & blue > 220) {
+                        count_white++;
+                    }
+                    String key = red + "," + green + "," + blue;
+                    if (colors.containsKey(key)) {
+                        count = colors.get(key);
+                        colors.put(key, count + 1);
+                    } else {
+                        colors.put(key, 1);
+                    }
+                }
+            }
+            double all_not_black_px = colors.values().stream().mapToInt(x -> x).sum();
+            List<Integer> color = new ArrayList<>();
+            if ((double) count_white / all_not_black_px > 0.3) {
+                for (int a=0; a < 3; a++) {
+                    color.add(255);
+                }
+                speech_bubble.setBackground_color(color);
+            } else {
+                int avg_red = 0;
+                int avg_green = 0;
+                int avg_blue = 0;
+                for (Map.Entry<String, Integer> entry : colors.entrySet()) {
+                    String[] color_values = entry.getKey().split(",");
+                    int num_of_px = entry.getValue();
+                    avg_red += Integer.parseInt(color_values[0]) * num_of_px;
+                    avg_green += Integer.parseInt(color_values[1]) * num_of_px;
+                    avg_blue += Integer.parseInt(color_values[2]) * num_of_px;
+                }
+                avg_red = (int) ((double) avg_red / all_not_black_px);
+                avg_green = (int) ((double) avg_green / all_not_black_px);
+                avg_blue = (int) ((double) avg_blue / all_not_black_px);
+                color.add(avg_red);
+                color.add(avg_green);
+                color.add(avg_blue);
+                speech_bubble.setBackground_color(color);
+            }
+
+            Log.d("kolory_tla", "koniec");
+            //
+
             Mat imgHSV = new Mat();
             Imgproc.cvtColor(croppedMat, imgHSV, Imgproc.COLOR_BGR2HSV);
             MatOfInt selectedChannels = new MatOfInt(0);
@@ -394,6 +459,7 @@ public class Page {
             rectangles_result.add(bigger_rectangles);
             rectangles_result.add(new ArrayList<>());
         }
+
 
         return rectangles_result;
     }
