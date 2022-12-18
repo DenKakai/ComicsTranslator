@@ -4,6 +4,8 @@ import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 
+import java.util.List;
+
 public class Rectangle {
     private int startX;
     private int startY;
@@ -14,6 +16,11 @@ public class Rectangle {
     private int optTextSize;
     private boolean visible;
     private boolean accepted;
+    private List<Integer> background_color;
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
 
 
     public Rectangle(int startX, int startY, int endX, int endY) {
@@ -74,6 +81,14 @@ public class Rectangle {
     public int getOptTextSize() {return optTextSize;}
 
     public void setOptTextSize(int optTextSize) {this.optTextSize = optTextSize;}
+
+    public List<Integer> getBackground_color() {
+        return background_color;
+    }
+
+    public void setBackground_color(List<Integer> background_color) {
+        this.background_color = background_color;
+    }
 
 
     @Override

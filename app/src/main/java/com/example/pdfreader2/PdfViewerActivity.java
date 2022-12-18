@@ -390,7 +390,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 List<Rectangle> speechBubbles;
                 List<Rectangle> rejectedBubbles;
                 List<List<Rectangle>> allBubbles;
-                allBubbles = page2.generate_speech_bubbles(0.5, 0.5,
+                allBubbles = page2.generate_speech_bubbles(0.5, 0.5 /*0.36*/,
                         bubblesDetector, 0.2,
                         true, bubblesClassifier);
                 speechBubbles = allBubbles.get(0);
@@ -406,7 +406,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 float proportionMapping = pageDetectorWidth / onePageWidth;
 
                 List<Rectangle> speechBubblesRealXY = new ArrayList<>();
-                String pathTesseract = getPathTess("tessdata", getContext());
+                String pathTesseract = getPathTess("eng.traineddata", getContext());
                 TessBaseAPI tess = new TessBaseAPI();
 
                 if (!tess.init(pathTesseract, "eng")) {
@@ -419,7 +419,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 for (Rectangle bubble : speechBubbles) {
                     String tlum = translateBubble(bubble, page2, tess);
                     Bitmap bitmap = getTappedRectangleAsBitmap(bubble, page2);
-                   // bitmap = getResizedBitmap(bitmap, (int) 1.2* bitmap.getWidth(), (int) 1.2* bitmap.getHeight());
+                    // bitmap = getResizedBitmap(bitmap, (int) 1.2* bitmap.getWidth(), (int) 1.2* bitmap.getHeight());
 
 //                    Mat source = new Mat();
 //                    Utils.bitmapToMat(bitmap, source);
@@ -496,6 +496,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                             (int) (bubble.getEndX() / proportionMapping),
                             (int) (bubble.getEndY() / proportionMapping));
                     rectangle_new.setText(tlum);
+                    rectangle_new.setBackground_color(bubble.getBackground_color());
                     rectangle_new.setVisible(true);
                     rectangle_new.setAccepted(true);
 
@@ -510,6 +511,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                             (int) (bubble.getStartY() / proportionMapping),
                             (int) (bubble.getEndX() / proportionMapping),
                             (int) (bubble.getEndY() / proportionMapping));
+                    rectangle_new.setBackground_color(bubble.getBackground_color());
                     rectangle_new.setVisible(false);
                     rectangle_new.setAccepted(false);
 
@@ -548,9 +550,11 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
             float onePageHeight = pdfView.getPageSize(pageIdx).getHeight();
             float wxhProportion = onePageWidth / onePageHeight;
             int max_px = 13500000;
+            //int max_px = 27000000;
             int width = (int) Math.floor(Math.sqrt(max_px * wxhProportion));
             int height = (int) (width / wxhProportion);
             Log.d("height and width", width + " x " + height);
+            Log.d("wymiary", "w PdfRenderer:" + width + " x " + height);
             Log.d("height * width", String.valueOf(width * height));
 
             bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
@@ -614,13 +618,13 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         @Override
         public void onLayerDrawn(Canvas canvas, float pageWidth, float pageHeight, int displayedPage) {
             Paint paintBG = new Paint();
-            paintBG.setColor(Color.WHITE);
             paintBG.setStrokeWidth(3);
 
             Log.d("Rysowanie", String.valueOf(translatedPages.keySet()));
             if(translatedPages.containsKey(pdfView.getCurrentPage())) {
                 TextPaint textPaint = new TextPaint();
                 textPaint.setColor(Color.BLACK);
+                Log.d("page", String.valueOf(page.getOrig_image()));
                 for (Rectangle bubble : translatedPages.get(pdfView.getCurrentPage())) {
                     if (bubble.isVisible()) {
                         Log.d("Bubble", String.valueOf(bubble));
@@ -628,6 +632,10 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                         int startY = (int) (bubble.getStartY() * pdfView.getZoom());
                         int endX = (int) (bubble.getEndX() * pdfView.getZoom());
                         int endY = (int) (bubble.getEndY() * pdfView.getZoom());
+                        Log.d("background_color", String.valueOf(bubble.getBackground_color()));
+                        paintBG.setColor(Color.rgb(bubble.getBackground_color().get(0),
+                                bubble.getBackground_color().get(1),
+                                bubble.getBackground_color().get(2)));
                         canvas.drawRect(startX, startY, endX, endY, paintBG);
                         RectF rect = new RectF(startX, startY, endX, endY);
                         Rectangle rectangle = new Rectangle(startX, startY, endX, endY);
@@ -642,13 +650,8 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                         sl.draw(canvas);
                         canvas.restore();
                     }
-                    else {
-                        continue;
-                    }
                 }
             }
-
-
         }
     }
 
@@ -809,7 +812,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
                     //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
                     if (Objects.isNull(foundBubble.getText())) {
-                        String pathTesseract = getPathTess("tessdata", getContext());
+                        String pathTesseract = getPathTess("eng.traineddata", getContext());
                         TessBaseAPI tess = new TessBaseAPI();
 
                         if (!tess.init(pathTesseract, "eng")) {
@@ -876,6 +879,3 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         return tlum;
     }
 }
-
-
-
