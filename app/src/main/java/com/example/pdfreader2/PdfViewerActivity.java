@@ -118,6 +118,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         pdfView.setMidZoom(2f);
 
         //TODO: zoomout ma nie przecuac ekranu do dolnego lewego rogu, a zoomin ma nie przerzucac do gornego lewego rogu
+        //TODO: naprawic, ze niezawsze dobrze sie wyszarza
 
         //przyblizenie
         mZoomInButton = findViewById(R.id.zoomIn);
@@ -314,7 +315,6 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
     // Upload file to storage and return a path.
     private static String getPath(String file, Context context) {
         //okazalo sie, ze to jest sciezka do assetow: context.getFilesDir().getAbsolutePath()
-        /*
         AssetManager assetManager = context.getAssets();
         BufferedInputStream inputStream = null;
         try {
@@ -332,7 +332,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
             return outFile.getAbsolutePath();
         } catch (IOException ex) {
             Log.i("TAG", "Failed to upload a file");
-        }*/
+        }
         return context.getFilesDir().getAbsolutePath() + "/" + file;
     }
 
@@ -567,7 +567,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
     }
 
     private static String getPathTess(String file, Context context) {
-        /*AssetManager assetManager = context.getAssets();
+        AssetManager assetManager = context.getAssets();
         BufferedInputStream inputStream = null;
         try {
             // Read data from assets.
@@ -586,7 +586,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
             return context.getFilesDir().getAbsolutePath();
         } catch (IOException ex) {
             Log.i("TAG", "Failed to upload a file");
-        }*/
+        }
         return context.getFilesDir().getAbsolutePath();
     }
 
