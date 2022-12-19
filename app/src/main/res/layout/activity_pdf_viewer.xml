@@ -62,6 +62,15 @@
                 android:src="@drawable/ic_baseline_navigate_next_24" />
 
             <ImageButton
+                android:id="@+id/translateWordButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_gravity="center"
+                android:background="@drawable/roundcorner"
+                android:src="@drawable/ic_baseline_short_text_24" />
+
+            <ImageButton
                 android:id="@+id/toggleBubbleTranslate"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -78,15 +87,6 @@
                 android:layout_gravity="center"
                 android:background="@drawable/roundcorner"
                 android:src="@drawable/ic_baseline_document_scanner_24" />
-
-            <ImageButton
-                android:id="@+id/clearBubbles"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:layout_gravity="center"
-                android:background="@drawable/roundcorner"
-                android:src="@drawable/ic_baseline_layers_clear_24" />
 
             <ImageButton
                 android:id="@+id/jumpToPage"
