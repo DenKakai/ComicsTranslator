@@ -63,21 +63,26 @@ public class WordCheck {
     }
 
     public static List<Rectangle> words_position(String result, String boxes) {
+        Log.d("result", result);
+        Log.d("boxes", boxes);
+
         String[] words_list = result.split(" ");
         List<String> boxes_list = Arrays.asList(boxes.split("\n"));
         int it = 0;
         List<Rectangle> resultList = new ArrayList<>();
         for (String cur_word : words_list) {
+            if (cur_word == " " | cur_word.isEmpty() | Objects.isNull(cur_word)) {continue;}
 
             int cur_word_length = cur_word.length();
             if (cur_word_length==1 & !cur_word.equals("I") & !cur_word.equals("A")) {
                 it+=1;
                 continue;
             }
+            Log.d("current word", cur_word);
             while (boxes_list.get(it).charAt(0) != cur_word.charAt(0)) {
                 it+=1;
             }
-
+            Log.d("first letter", String.valueOf(boxes_list.get(it).charAt(0)));
             String first_char = boxes_list.get(it);
             String[] first_char_coordinates = first_char.split(" ");
             String last_char = boxes_list.get(it + cur_word_length -1);
