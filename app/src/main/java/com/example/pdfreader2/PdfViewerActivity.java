@@ -79,7 +79,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
     private ImageButton mPageLeftButton;
     private ImageButton mPageRightButton;
     private ImageButton mFindBubblesButton;
-    private ImageButton mClearBubblesButton;
+    private ImageButton mTranslateWordButton;
     private ImageButton mToggleBubbleTranslateButton;
     private ImageButton mJumpToPageButton;
 
@@ -274,27 +274,31 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 else {
                     mToggleBubbleTranslateButton.setAlpha(1f);
                     translateBubbleFlag = true;
+                    mTranslateWordButton.setAlpha(0.75f);
+                    translateWordFlag = false;
                 }
             }
         });
 
-        //czyszczenie chmurek
+        //tlumaczenie slowa
 
-        mClearBubblesButton = findViewById(R.id.clearBubbles);
-        mClearBubblesButton.setAlpha(0.75f);
-        mClearBubblesButton.setOnClickListener(new View.OnClickListener() {
+        mTranslateWordButton = findViewById(R.id.translateWordButton);
+        mTranslateWordButton.setAlpha(0.75f);
+        mTranslateWordButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View view) {
                 //translatedPages.remove(pdfView.getCurrentPage());
                 //pdfView.invalidate();
                 if (translateWordFlag) {
-                    mClearBubblesButton.setAlpha(0.75f);
+                    mTranslateWordButton.setAlpha(0.75f);
                     translateWordFlag = false;
                 }
                 else {
-                    mClearBubblesButton.setAlpha(1f);
+                    mTranslateWordButton.setAlpha(1f);
                     translateWordFlag = true;
+                    translateBubbleFlag = false;
+                    mToggleBubbleTranslateButton.setAlpha(0.75f);
                 }
             }
         });
@@ -317,8 +321,8 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         exampleDialog.show(getSupportFragmentManager(), "example dialog");
     }
 
-    public void openDialogWord() {
-        ExampleDialog exampleDialog = new ExampleDialog(1, pdfView.getPageCount(), pdfView.getCurrentPage() + 1);
+    public void openDialogWord(String word, String translation) {
+        DialogWord exampleDialog = new DialogWord(word, translation);
         exampleDialog.show(getSupportFragmentManager(), "example dialog");
     }
 
@@ -990,7 +994,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                             e2.printStackTrace();
                         }
                         //otworzyc dialog
-                        openDialogWord();
+                        openDialogWord(foundBubbleWord.getText(), tlum);
                     }
 
                 } catch (Exception exception) {

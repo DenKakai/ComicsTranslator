@@ -9,11 +9,14 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.NumberPicker;
+import android.widget.TextView;
 
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDialogFragment;
+
+import org.w3c.dom.Text;
 
 import java.util.Objects;
 
@@ -21,7 +24,7 @@ public class DialogWord extends AppCompatDialogFragment {
 
     private final String word;
     private final String translation;
-    private EditText text;
+    private TextView helloTextView;
 
     public DialogWord(String word, String translation) {
         this.word = word;
@@ -35,13 +38,11 @@ public class DialogWord extends AppCompatDialogFragment {
 
         LayoutInflater inflater = requireActivity().getLayoutInflater();
         View view = inflater.inflate(R.layout.dialog_word, null);
-        text = findViewById(R.id.translation);
+        helloTextView = view.findViewById(R.id.translation);
+        helloTextView.setText(word + " - " + translation);
 
         builder.setView(view)
-                .setTitle("Choose page")
-                .setNegativeButton("cancel", (dialogInterface, i) -> {
-
-                })
+                .setTitle("Tłumaczenie")
                 .setPositiveButton("ok", (dialogInterface, i) -> {
 
                 });
