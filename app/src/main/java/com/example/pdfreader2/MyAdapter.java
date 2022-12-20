@@ -86,6 +86,8 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>{
                             context.startActivity(intent);
                         }
                         else if(Arrays.asList("cbz").contains(FilenameUtils.getExtension(selectedFile.getPath()))) {
+                            //TODO: trzeba dac komunikat np. z procentami otwirania cbzki bo to zajmuje jakies ~7sekund na tym ktory testowalem
+                            //TODO: trzeba posortowac strony od pierwszej do ostatniej bo sa losowo
                             PDFBoxResourceLoader.init(context);
 
                             PDDocument document = new PDDocument();
