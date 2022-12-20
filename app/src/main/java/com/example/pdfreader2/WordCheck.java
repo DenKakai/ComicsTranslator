@@ -71,7 +71,39 @@ public class WordCheck {
 
         String[] words_list = result.split(" ");
         boxes = boxes.replace("|", "I");
+        boxes = boxes.replace("_", " ");
+        boxes = boxes.replace("—", "-");
         List<String> boxes_list = Arrays.asList(boxes.split("\n"));
+        List<String> boxes_list_up = new ArrayList<>();
+
+        for (String box : boxes_list) {
+            char cur_char = box.charAt(0);
+            if (cur_char == '|') {
+                cur_char = 'I';
+                StringBuilder tmp = new StringBuilder(box);
+                tmp.setCharAt(0, cur_char);
+                box = tmp.toString();
+            }
+            if (cur_char == '’') {
+                cur_char = '\'';
+                StringBuilder tmp = new StringBuilder(box);
+                tmp.setCharAt(0, cur_char);
+                box = tmp.toString();}
+            if (isLetter(cur_char)) {
+                boxes_list_up.add(box);
+                continue;
+            }
+            if (isDigit(cur_char)) {
+                boxes_list_up.add(box);
+                continue;
+            }
+            if (cur_char == '.' | cur_char == '\'' | cur_char == '-' | cur_char == ',' | cur_char == '?' | cur_char == '!') {
+                boxes_list_up.add(box);
+                continue;
+            }
+
+        }
+
         int it = 0;
         List<Rectangle> resultList = new ArrayList<>();
         for (String cur_word : words_list) {
@@ -84,22 +116,29 @@ public class WordCheck {
             }
             Log.d("current word", cur_word);
 
-            while (boxes_list.get(it).toUpperCase().charAt(0) != cur_word.charAt(0)
-                    | boxes_list.get(it+cur_word_length-1).toUpperCase().charAt(0) != cur_word.charAt(cur_word_length-1)) {
+            try {
+                while (boxes_list_up.get(it).toUpperCase().charAt(0) != cur_word.charAt(0)
+                    | boxes_list_up.get(it+cur_word_length-1).toUpperCase().charAt(0) != cur_word.charAt(cur_word_length-1)) {
                 it+=1;
+            }} catch (ArrayIndexOutOfBoundsException e) {
+                Log.d("warning", cur_word);
+                continue;
+            } catch (IndexOutOfBoundsException e) {
+                Log.d("warning", cur_word);
+                continue;
             }
-            String first_char = boxes_list.get(it);
+            String first_char = boxes_list_up.get(it);
             String[] first_char_coordinates = first_char.split(" ");
             int min_height = Integer.parseInt(first_char_coordinates[2]);
             Log.d("first character", first_char);
 
-            String last_char = boxes_list.get(it + cur_word_length -1);
+            String last_char = boxes_list_up.get(it + cur_word_length -1);
             String[] last_char_coordinates = last_char.split(" ");
             int max_height = Integer.parseInt(last_char_coordinates[4]);
             Log.d("last char", last_char);
 
             for (int k = it+1; k < it + cur_word_length -1; k++) {
-                String cur_char = boxes_list.get(k);
+                String cur_char = boxes_list_up.get(k);
                 String[] cur_char_coordinates = cur_char.split(" ");
                 if (Integer.parseInt(cur_char_coordinates[2]) < min_height) {
                     min_height = Integer.parseInt(cur_char_coordinates[2]);

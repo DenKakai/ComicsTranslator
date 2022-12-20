@@ -700,13 +700,14 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
 
                     String text = foundBubbleWord.getText();
+                    text = WordCheck.removeSingleChars(text);
                     String tlum = "";
                     try {
                         String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
                         Translator translator = new Translator(authKey);
                         TextResult result =
                                 translator.translateText(text, null, "pl");
-                        tlum = result.getText();
+                        tlum = result.getText().replace("Š", "Ą");
                         Log.d("tlum", text + " | " + tlum);
                     } catch (Exception e2) {
                         e2.printStackTrace();
@@ -868,21 +869,17 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                         }
                         text.toUpperCase();
                         Log.d("ocr", text + " " + text.length());
-                        try {
-                            List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
 
-                            for (Rectangle bubbleWord : bubbleWords) {
-                                Rectangle rectangle_new = new Rectangle(
-                                        (int) ((bubble.getStartX() + bubbleWord.getStartX()) / proportionMapping),
-                                        (int) ((bubble.getEndY() - bubbleWord.getEndY()) / proportionMapping),
-                                        (int) ((bubble.getStartX() + bubbleWord.getEndX()) / proportionMapping),
-                                        (int) ((bubble.getEndY() - bubbleWord.getStartY()) / proportionMapping));
-                                rectangle_new.setText(bubbleWord.getText());
-                                speechBubblesWordsRealXY.add(rectangle_new);
-                            }
-                        } catch(ArrayIndexOutOfBoundsException e) {
-                            Log.d("warning", text);
-                            continue;
+                        List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
+
+                        for (Rectangle bubbleWord : bubbleWords) {
+                            Rectangle rectangle_new = new Rectangle(
+                                    (int) ((bubble.getStartX() + bubbleWord.getStartX()) / proportionMapping),
+                                    (int) ((bubble.getEndY() - bubbleWord.getEndY()) / proportionMapping),
+                                    (int) ((bubble.getStartX() + bubbleWord.getEndX()) / proportionMapping),
+                                    (int) ((bubble.getEndY() - bubbleWord.getStartY()) / proportionMapping));
+                            rectangle_new.setText(bubbleWord.getText());
+                            speechBubblesWordsRealXY.add(rectangle_new);
                         }
 
 
@@ -891,7 +888,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                             Translator translator = new Translator(authKey);
                             TextResult result =
                                     translator.translateText(text, null, "pl");
-                            tlum = result.getText();
+                            tlum = result.getText().replace("Š", "Ą");
                             Log.d("tlum", text + " | " + tlum);
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -1402,7 +1399,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
         tess.setImage(bitmap);
         String text = tess.getUTF8Text();
-        String text2 = WordCheck.removeSingleChars(text);
+        text = WordCheck.removeSingleChars(text);
 
 
         String tlum = "";
@@ -1411,7 +1408,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
             Translator translator = new Translator(authKey);
             TextResult result =
                     translator.translateText(text, null, "pl");
-            tlum = result.getText();
+            tlum = result.getText().replace("Š", "Ą");
             Log.d("tlum", text + " | " + tlum);
         } catch (Exception e) {
             e.printStackTrace();
