@@ -300,6 +300,9 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
     }
 
     public void openDialogWord(String word, String translation) {
+        if(!Character.isLetter(word.charAt(word.length()-1))) {
+            word = word.substring(0, word.length()-1);
+        }
         DialogWord exampleDialog = new DialogWord(word, translation);
         exampleDialog.show(getSupportFragmentManager(), "example dialog");
     }
@@ -700,14 +703,18 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
 
                     String text = foundBubbleWord.getText();
-                    text = WordCheck.removeSingleChars(text);
+                    text = WordCheck.removeSingleChars(text).replace(" ", "");
                     String tlum = "";
                     try {
                         String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+                        Log.d("text to translate", text);
                         Translator translator = new Translator(authKey);
+                        if(!Character.isLetter(text.charAt(text.length()-1))) {
+                            text = text.substring(0, text.length()-1);
+                        }
                         TextResult result =
-                                translator.translateText(text, null, "pl");
-                        tlum = result.getText().replace("Š", "Ą");
+                                translator.translateText(text.toLowerCase(), null, "pl");
+                        tlum = result.getText().replace("Š", "Ą").toUpperCase();
                         Log.d("tlum", text + " | " + tlum);
                     } catch (Exception e2) {
                         e2.printStackTrace();
@@ -887,8 +894,8 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                             String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
                             Translator translator = new Translator(authKey);
                             TextResult result =
-                                    translator.translateText(text, null, "pl");
-                            tlum = result.getText().replace("Š", "Ą");
+                                    translator.translateText(text.toLowerCase(), null, "pl");
+                            tlum = result.getText().replace("Š", "Ą").toUpperCase();
                             Log.d("tlum", text + " | " + tlum);
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -1407,8 +1414,8 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
             String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
             Translator translator = new Translator(authKey);
             TextResult result =
-                    translator.translateText(text, null, "pl");
-            tlum = result.getText().replace("Š", "Ą");
+                    translator.translateText(text.toLowerCase(), null, "pl");
+            tlum = result.getText().replace("Š", "Ą").toUpperCase();
             Log.d("tlum", text + " | " + tlum);
         } catch (Exception e) {
             e.printStackTrace();
