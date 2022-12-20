@@ -1,17 +1,6 @@
 package com.example.pdfreader2;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.viewpager.widget.ViewPager;
-
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -19,56 +8,41 @@ import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
-import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.pdf.PdfRenderer;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
-import android.provider.MediaStore;
-import android.provider.Settings;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.Toast;
-import android.os.Process;
 
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.deepl.api.TextResult;
+import com.deepl.api.Translator;
 import com.github.barteksc.pdfviewer.PDFView;
-import com.github.barteksc.pdfviewer.listener.Callbacks;
-import com.github.barteksc.pdfviewer.listener.OnDrawListener;
-import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
-import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.googlecode.tesseract.android.TessBaseAPI;
-import com.shockwave.pdfium.util.SizeF;
+
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CountDownLatch;
-
-import org.opencv.android.Utils;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
-import org.opencv.core.Rect;
-import org.opencv.imgproc.Imgproc;
 
 
 public class PdfViewerActivity extends AppCompatActivity implements ExampleDialog.ExampleDialogListener{
@@ -723,16 +697,17 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 }
                 if (!Objects.isNull(foundBubbleWord)) {
                     //robi tlumaczenie tekstu
-                    Translator translator = new Translator();
-                    WordCheck w2 = new WordCheck();
+
+
                     String text = foundBubbleWord.getText();
                     String tlum = "";
                     try {
-                        CountDownLatch countDownLatch = new CountDownLatch(1);
-                        translator.run(text, w2, countDownLatch);
-                        countDownLatch.await();
-                        tlum = w2.getTest();
-                        Log.d("tlum", tlum);
+                        String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+                        Translator translator = new Translator(authKey);
+                        TextResult result =
+                                translator.translateText(text, null, "pl");
+                        tlum = result.getText();
+                        Log.d("tlum", text + " | " + tlum);
                     } catch (Exception e2) {
                         e2.printStackTrace();
                     }
@@ -893,30 +868,35 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                         }
                         text.toUpperCase();
                         Log.d("ocr", text + " " + text.length());
-                        List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
+                        try {
+                            List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
 
-                        for (Rectangle bubbleWord : bubbleWords) {
-                            Rectangle rectangle_new = new Rectangle(
-                                    (int) ((bubble.getStartX() + bubbleWord.getStartX()) / proportionMapping),
-                                    (int) ((bubble.getEndY() - bubbleWord.getEndY()) / proportionMapping),
-                                    (int) ((bubble.getStartX() + bubbleWord.getEndX()) / proportionMapping),
-                                    (int) ((bubble.getEndY() - bubbleWord.getStartY()) / proportionMapping));
-                            rectangle_new.setText(bubbleWord.getText());
-                            speechBubblesWordsRealXY.add(rectangle_new);
+                            for (Rectangle bubbleWord : bubbleWords) {
+                                Rectangle rectangle_new = new Rectangle(
+                                        (int) ((bubble.getStartX() + bubbleWord.getStartX()) / proportionMapping),
+                                        (int) ((bubble.getEndY() - bubbleWord.getEndY()) / proportionMapping),
+                                        (int) ((bubble.getStartX() + bubbleWord.getEndX()) / proportionMapping),
+                                        (int) ((bubble.getEndY() - bubbleWord.getStartY()) / proportionMapping));
+                                rectangle_new.setText(bubbleWord.getText());
+                                speechBubblesWordsRealXY.add(rectangle_new);
+                            }
+                        } catch(ArrayIndexOutOfBoundsException e) {
+                            Log.d("warning", text);
+                            continue;
                         }
 
-                        Translator translator = new Translator();
-                        WordCheck w2 = new WordCheck();
+
                         try {
-                            CountDownLatch countDownLatch = new CountDownLatch(1);
-                            translator.run(text, w2, countDownLatch);
-                            countDownLatch.await();
-                            tlum = w2.getTest();
-                            Log.d("tlum", tlum + " " + tlum.length());
+                            String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+                            Translator translator = new Translator(authKey);
+                            TextResult result =
+                                    translator.translateText(text, null, "pl");
+                            tlum = result.getText();
+                            Log.d("tlum", text + " | " + tlum);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
-                        if (Objects.equals(tlum, "")) {
+                        if (Objects.equals(tlum, "") | tlum.equals(text)) {
                             continue;
                         }
                         translatedPagesCopy.get(i).setText(tlum);
@@ -1424,15 +1404,15 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         String text = tess.getUTF8Text();
         String text2 = WordCheck.removeSingleChars(text);
 
-        Translator translator = new Translator();
-        WordCheck w2 = new WordCheck();
+
         String tlum = "";
         try {
-            CountDownLatch countDownLatch = new CountDownLatch(1);
-            translator.run(text2, w2, countDownLatch);
-            countDownLatch.await();
-            tlum = w2.getTest();
-            Log.d("tlum", tlum);
+            String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+            Translator translator = new Translator(authKey);
+            TextResult result =
+                    translator.translateText(text, null, "pl");
+            tlum = result.getText();
+            Log.d("tlum", text + " | " + tlum);
         } catch (Exception e) {
             e.printStackTrace();
         }
