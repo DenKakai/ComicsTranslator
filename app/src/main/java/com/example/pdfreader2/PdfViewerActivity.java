@@ -21,6 +21,11 @@ import android.text.TextPaint;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.ImageButton;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.deepl.api.TextResult;
+import com.deepl.api.Translator;
 import com.github.barteksc.pdfviewer.PDFView;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
@@ -639,16 +644,18 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 }
                 if (!Objects.isNull(foundBubbleWord)) {
                     //robi tlumaczenie tekstu
-                    Translator translator = new Translator();
-                    WordCheck w2 = new WordCheck();
+
+
                     String text = foundBubbleWord.getText();
+                    text = WordCheck.removeSingleChars(text);
                     String tlum = "";
                     try {
-                        CountDownLatch countDownLatch = new CountDownLatch(1);
-                        translator.run(text, w2, countDownLatch);
-                        countDownLatch.await();
-                        tlum = w2.getTest();
-                        Log.d("tlum", tlum);
+                        String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+                        Translator translator = new Translator(authKey);
+                        TextResult result =
+                                translator.translateText(text, null, "pl");
+                        tlum = result.getText().replace("Š", "Ą");
+                        Log.d("tlum", text + " | " + tlum);
                     } catch (Exception e2) {
                         e2.printStackTrace();
                     }
@@ -814,18 +821,19 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                             speechBubblesWordsRealXY.add(rectangle_new);
                         }
 
-                        Translator translator = new Translator();
-                        WordCheck w2 = new WordCheck();
+
                         try {
-                            CountDownLatch countDownLatch = new CountDownLatch(1);
-                            translator.run(text, w2, countDownLatch);
-                            countDownLatch.await();
-                            tlum = w2.getTest();
-                            Log.d("tlum", tlum + " " + tlum.length());
+                            String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+                            Translator translator = new Translator(authKey);
+                            TextResult result =
+                                    translator.translateText(text, null, "pl");
+                            tlum = result.getText().replace("Š", "Ą");
+                            Log.d("tlum", text + " | " + tlum);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
-                        if (Objects.equals(tlum, "")) {
+                        //TODO: nie wiem czy ta prawa strona ora jest git
+                        if (Objects.equals(tlum, "") | tlum.equals(text)) {
                             continue;
                         }
                         translatedPagesCopy.get(i).setText(tlum);
@@ -1325,17 +1333,17 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
         tess.setImage(bitmap);
         String text = tess.getUTF8Text();
-        String text2 = WordCheck.removeSingleChars(text);
+        text = WordCheck.removeSingleChars(text);
 
-        Translator translator = new Translator();
-        WordCheck w2 = new WordCheck();
+
         String tlum = "";
         try {
-            CountDownLatch countDownLatch = new CountDownLatch(1);
-            translator.run(text2, w2, countDownLatch);
-            countDownLatch.await();
-            tlum = w2.getTest();
-            Log.d("tlum", tlum);
+            String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+            Translator translator = new Translator(authKey);
+            TextResult result =
+                    translator.translateText(text, null, "pl");
+            tlum = result.getText().replace("Š", "Ą");
+            Log.d("tlum", text + " | " + tlum);
         } catch (Exception e) {
             e.printStackTrace();
         }
