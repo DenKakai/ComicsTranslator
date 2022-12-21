@@ -1,5 +1,6 @@
 package com.example.pdfreader2;
 
+import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
@@ -19,7 +20,6 @@ import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.view.View;
 import android.widget.ImageButton;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,22 +27,27 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.deepl.api.TextResult;
 import com.deepl.api.Translator;
 import com.github.barteksc.pdfviewer.PDFView;
+import com.github.barteksc.pdfviewer.listener.Callbacks;
+import com.github.barteksc.pdfviewer.listener.OnDrawListener;
+import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
+import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.googlecode.tesseract.android.TessBaseAPI;
-
-import org.opencv.android.Utils;
-import org.opencv.core.Mat;
-
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
 
 
 public class PdfViewerActivity extends AppCompatActivity implements ExampleDialog.ExampleDialogListener{
@@ -58,13 +63,11 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
     private ImageButton mJumpToPageButton;
 
     private Page page = new Page();
-    private ArrayList<Bitmap> pdfAsListOfBitmaps;
-    private Handler mainHandler = new Handler();
     private List<Integer> cumXOffset = new ArrayList<>();
 
-    private Map<Integer, List<Rectangle>> translatedPages = new HashMap<Integer, List<Rectangle>>();
-    private Map<Integer, List<Rectangle>> translatedPagesWords = new HashMap<Integer, List<Rectangle>>();
-    private Map<Integer, List<Rectangle>> translatedPagesDetector = new HashMap<Integer, List<Rectangle>>();
+    private Map<Integer, List<Rectangle>> translatedPages = new HashMap<>();
+    private Map<Integer, List<Rectangle>> translatedPagesWords = new HashMap<>();
+    private Map<Integer, List<Rectangle>> translatedPagesDetector = new HashMap<>();
     File file;
     Bitmap pdfPageAsBitmap;
     boolean translateBubbleFlag = false;
@@ -103,37 +106,29 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         //przyblizenie
         mZoomInButton = findViewById(R.id.zoomIn);
         mZoomInButton.setAlpha(0.75f);
-        mZoomInButton.setOnClickListener(new View.OnClickListener() {
+        mZoomInButton.setOnClickListener(view -> {
+            int curPage = pdfView.getCurrentPage();
 
-            @Override
-            public void onClick(View view) {
-                int curPage = pdfView.getCurrentPage();
-
-                if (pdfView.getZoom() < 5f) {
-                    pdfView.zoomTo(pdfView.getZoom() + 1f);
-                    pdfView.jumpTo(curPage);
-                    pdfView.loadPages();
-                }
-
-                if (pdfView.getZoom() == 5f) {
-                    mZoomInButton.setEnabled(false);
-                    mZoomInButton.setAlpha(.35f);
-                    mZoomInButton.setClickable(false);
-
-                    mZoomOutButton.setEnabled(true);
-                    mZoomOutButton.setAlpha(1f);
-                    mZoomOutButton.setClickable(true);
-                } else
-                {
-                    mZoomInButton.setEnabled(true);
-                    mZoomInButton.setAlpha(1f);
-                    mZoomInButton.setClickable(true);
-
-                    mZoomOutButton.setEnabled(true);
-                    mZoomOutButton.setAlpha(1f);
-                    mZoomOutButton.setClickable(true);
-                }
+            if (pdfView.getZoom() < 5f) {
+                pdfView.zoomTo(pdfView.getZoom() + 1f);
+                pdfView.jumpTo(curPage);
+                pdfView.loadPages();
             }
+
+            if (pdfView.getZoom() == 5f) {
+                mZoomInButton.setEnabled(false);
+                mZoomInButton.setAlpha(.35f);
+                mZoomInButton.setClickable(false);
+
+            } else {
+                mZoomInButton.setEnabled(true);
+                mZoomInButton.setAlpha(1f);
+                mZoomInButton.setClickable(true);
+
+            }
+            mZoomOutButton.setEnabled(true);
+            mZoomOutButton.setAlpha(1f);
+            mZoomOutButton.setClickable(true);
         });
 
 
@@ -144,52 +139,44 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         mZoomOutButton.setAlpha(.35f);
         mZoomOutButton.setClickable(false);
 
-        mZoomOutButton.setOnClickListener(new View.OnClickListener() {
+        mZoomOutButton.setOnClickListener(view -> {
+            int curPage = pdfView.getCurrentPage();
+            float curZoom = pdfView.getZoom();
 
-            @Override
-            public void onClick(View view) {
-                int curPage = pdfView.getCurrentPage();
-                float curZoom = pdfView.getZoom();
-
-                if (curZoom >= 2f) {
-                    pdfView.zoomTo(curZoom - 1f);
-                    pdfView.jumpTo(curPage);
-                    pdfView.loadPages();
-                } else if (curZoom > 1f){
-                    pdfView.zoomTo(1f);
-                    pdfView.jumpTo(curPage);
-                    pdfView.loadPages();
-                }
-
-                if (pdfView.getZoom() == 1f) {
-                    mZoomOutButton.setEnabled(false);
-                    mZoomOutButton.setAlpha(.35f);
-                    mZoomOutButton.setClickable(false);
-
-                } else
-                {
-                    mZoomOutButton.setEnabled(true);
-                    mZoomOutButton.setAlpha(0.75f);
-                    mZoomOutButton.setClickable(true);
-
-                }
-                mZoomInButton.setEnabled(true);
-                mZoomInButton.setAlpha(0.75f);
-                mZoomInButton.setClickable(true);
+            if (curZoom >= 2f) {
+                pdfView.zoomTo(curZoom - 1f);
+                pdfView.jumpTo(curPage);
+                pdfView.loadPages();
+            } else if (curZoom > 1f){
+                pdfView.zoomTo(1f);
+                pdfView.jumpTo(curPage);
+                pdfView.loadPages();
             }
+
+            if (pdfView.getZoom() == 1f) {
+                mZoomOutButton.setEnabled(false);
+                mZoomOutButton.setAlpha(.35f);
+                mZoomOutButton.setClickable(false);
+
+            } else
+            {
+                mZoomOutButton.setEnabled(true);
+                mZoomOutButton.setAlpha(0.75f);
+                mZoomOutButton.setClickable(true);
+
+            }
+            mZoomInButton.setEnabled(true);
+            mZoomInButton.setAlpha(0.75f);
+            mZoomInButton.setClickable(true);
         });
 
         //zmiana strony w lewo
         mPageLeftButton = findViewById(R.id.pageLeft);
         mPageLeftButton.setAlpha(0.75f);
-        mPageLeftButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                int curPage = pdfView.getCurrentPage();
-                if (curPage >= 1) {
-                    pdfView.jumpTo(curPage - 1);
-                }
+        mPageLeftButton.setOnClickListener(view -> {
+            int curPage = pdfView.getCurrentPage();
+            if (curPage >= 1) {
+                pdfView.jumpTo(curPage - 1);
             }
         });
 
@@ -197,14 +184,10 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         //zmiana strony w prawo
         mPageRightButton = findViewById(R.id.pageRight);
         mPageRightButton.setAlpha(0.75f);
-        mPageRightButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                int curPage = pdfView.getCurrentPage();
-                if (curPage < pdfView.getPageCount() - 1) {
-                    pdfView.jumpTo(curPage + 1);
-                }
+        mPageRightButton.setOnClickListener(view -> {
+            int curPage = pdfView.getCurrentPage();
+            if (curPage < pdfView.getPageCount() - 1) {
+                pdfView.jumpTo(curPage + 1);
             }
         });
 
@@ -224,37 +207,29 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
         mFindBubblesButton = findViewById(R.id.findBubbles);
         mFindBubblesButton.setAlpha(0.75f);
-        mFindBubblesButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                //mFindBubblesButton.setEnabled(false);
-                page = new Page();
-                int DDpi = getResources().getDisplayMetrics().densityDpi;
-                ExampleRunnable runnable = new ExampleRunnable(DDpi, file, pdfView.getCurrentPage(),
-                        page, bubblesDetector, bubblesClassifier);
-                new Thread(runnable).start();
-            }
+        mFindBubblesButton.setOnClickListener(view -> {
+            //mFindBubblesButton.setEnabled(false);
+            page = new Page();
+            int DDpi = getResources().getDisplayMetrics().densityDpi;
+            ExampleRunnable runnable = new ExampleRunnable(DDpi, file, pdfView.getCurrentPage(),
+                    page, bubblesDetector, bubblesClassifier);
+            new Thread(runnable).start();
         });
 
         //tlumaczenie chmurki
 
         mToggleBubbleTranslateButton = findViewById(R.id.toggleBubbleTranslate);
         mToggleBubbleTranslateButton.setAlpha(0.75f);
-        mToggleBubbleTranslateButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                if (translateBubbleFlag) {
-                    mToggleBubbleTranslateButton.setAlpha(0.75f);
-                    translateBubbleFlag = false;
-                }
-                else {
-                    mToggleBubbleTranslateButton.setAlpha(1f);
-                    translateBubbleFlag = true;
-                    mTranslateWordButton.setAlpha(0.75f);
-                    translateWordFlag = false;
-                }
+        mToggleBubbleTranslateButton.setOnClickListener(view -> {
+            if (translateBubbleFlag) {
+                mToggleBubbleTranslateButton.setAlpha(0.75f);
+                translateBubbleFlag = false;
+            }
+            else {
+                mToggleBubbleTranslateButton.setAlpha(1f);
+                translateBubbleFlag = true;
+                mTranslateWordButton.setAlpha(0.75f);
+                translateWordFlag = false;
             }
         });
 
@@ -262,22 +237,18 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
         mTranslateWordButton = findViewById(R.id.translateWordButton);
         mTranslateWordButton.setAlpha(0.75f);
-        mTranslateWordButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                //translatedPages.remove(pdfView.getCurrentPage());
-                //pdfView.invalidate();
-                if (translateWordFlag) {
-                    mTranslateWordButton.setAlpha(0.75f);
-                    translateWordFlag = false;
-                }
-                else {
-                    mTranslateWordButton.setAlpha(1f);
-                    translateWordFlag = true;
-                    translateBubbleFlag = false;
-                    mToggleBubbleTranslateButton.setAlpha(0.75f);
-                }
+        mTranslateWordButton.setOnClickListener(view -> {
+            //translatedPages.remove(pdfView.getCurrentPage());
+            //pdfView.invalidate();
+            if (translateWordFlag) {
+                mTranslateWordButton.setAlpha(0.75f);
+                translateWordFlag = false;
+            }
+            else {
+                mTranslateWordButton.setAlpha(1f);
+                translateWordFlag = true;
+                translateBubbleFlag = false;
+                mToggleBubbleTranslateButton.setAlpha(0.75f);
             }
         });
 
@@ -285,13 +256,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
         mJumpToPageButton = findViewById(R.id.jumpToPage);
         mJumpToPageButton.setAlpha(0.75f);
-        mJumpToPageButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                openDialog();
-            }
-        });
+        mJumpToPageButton.setOnClickListener(view -> openDialog());
     }
 
     public void openDialog() {
@@ -316,7 +281,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
     private static String getPath(String file, Context context) {
         //okazalo sie, ze to jest sciezka do assetow: context.getFilesDir().getAbsolutePath()
         AssetManager assetManager = context.getAssets();
-        BufferedInputStream inputStream = null;
+        BufferedInputStream inputStream;
         try {
             // Read data from assets.
             inputStream = new BufferedInputStream(assetManager.open(file));
@@ -373,7 +338,6 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 float proportionMapping = pageDetectorWidth / onePageWidth;
 
                 List<Rectangle> speechBubblesRealXY = new ArrayList<>();
-                List<Rectangle> speechBubblesWordsRealXY = new ArrayList<>();
 
                 Handler threadHandler = new Handler(Looper.getMainLooper());
                 if (!translatedPagesDetector.containsKey(pageIdx)) {
@@ -386,12 +350,9 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     speechBubblesRealXY = mapToRealXY(tmp, proportionMapping);
                     //to jest tak, bo musi byc w threadzie
                     List<Rectangle> finalSpeechBubblesRealXY = speechBubblesRealXY;
-                    threadHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            translatedPagesDetector.put(pageIdx, tmp);
-                            translatedPages.put(pageIdx, finalSpeechBubblesRealXY);
-                        }
+                    threadHandler.post(() -> {
+                        translatedPagesDetector.put(pageIdx, tmp);
+                        translatedPages.put(pageIdx, finalSpeechBubblesRealXY);
                     });
                     foundBubble = tappedRectangle(speechBubblesRealXY, thisPageXRealScale, thisPageYRealScale);
                     //^
@@ -408,7 +369,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 String translatedText = "";
                 List<Rectangle> newBubbleWords = new ArrayList<>();
 
-                if (Objects.isNull(foundBubble.getText())) {
+                if (!Objects.isNull(foundBubble) && Objects.isNull(foundBubble.getText())) {
                     String pathTesseract = getPathTess("eng.traineddata", getContext());
                     TessBaseAPI tess = new TessBaseAPI();
 
@@ -451,7 +412,6 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     text = text.trim().replaceAll(" +", " ");
 
                     if (!text.isEmpty() & !text.equals(" ")) {
-                        List<Rectangle> speechBubbleWords = new ArrayList<>();
                         text.toUpperCase();
                         Log.d("ocr", text + " " + text.length());
 
@@ -470,27 +430,39 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     }
                     //^
                 }
-                else {
+                else if (!Objects.isNull(foundBubble)) {
                     translatedText = foundBubble.getText();
+                } else {
+                    translatedText = "";
                 }
 
                 //jezeli visible to invis, i na odwrot
                 String finalTranslatedText = translatedText;
-                threadHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
+                threadHandler.post(() -> {
+                    if (!Objects.isNull(foundBubble)) {
                         foundBubble.setVisible(!foundBubble.isVisible());
                         foundBubble.setText(finalTranslatedText);
-                        if (!newBubbleWords.isEmpty()) {
-                            if (translatedPagesWords.containsKey(pageIdx)) {
-                                translatedPagesWords.get(pageIdx).addAll(newBubbleWords);
-                            }
-                            else {
-                                translatedPagesWords.put(pageIdx, newBubbleWords);
-                            }
-                        }
-                        pdfView.invalidate();
                     }
+                    if (!newBubbleWords.isEmpty()) {
+                        if (translatedPagesWords.containsKey(pageIdx)) {
+                            translatedPagesWords.get(pageIdx).addAll(newBubbleWords);
+                        }
+                        else {
+                            translatedPagesWords.put(pageIdx, newBubbleWords);
+                        }
+                    }
+                    mFindBubblesButton.setEnabled(true);
+                    mFindBubblesButton.setAlpha(.75f);
+                    mFindBubblesButton.setClickable(true);
+                    mTranslateWordButton.setEnabled(true);
+                    mTranslateWordButton.setAlpha(.75f);
+                    mTranslateWordButton.setClickable(true);
+                    mToggleBubbleTranslateButton.setEnabled(true);
+                    mToggleBubbleTranslateButton.setAlpha(1f);
+                    mToggleBubbleTranslateButton.setClickable(true);
+                    translateWordFlag = false;
+                    translateBubbleFlag = true;
+                    pdfView.invalidate();
                 });
             }
             catch (Exception e) {
@@ -536,10 +508,17 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 float pageDetectorWidth = page2.getOrig_image().cols();
                 float proportionMapping = pageDetectorWidth / onePageWidth;
 
-                List<Rectangle> speechBubblesRealXY = new ArrayList<>();
-                List<Rectangle> speechBubblesWordsRealXY = new ArrayList<>();
-
                 Handler threadHandler = new Handler(Looper.getMainLooper());
+
+                threadHandler.post(() -> {
+                    mFindBubblesButton.setEnabled(false);
+                    mFindBubblesButton.setAlpha(.35f);
+                    mFindBubblesButton.setClickable(false);
+                });
+
+                List<Rectangle> speechBubblesRealXY = new ArrayList<>();
+
+
                 if (!translatedPagesDetector.containsKey(pageIdx)) {
                     page2 = scanPage(file, pageIdx, bubblesDetector, bubblesClassifier);
                     List<Rectangle> tmp = new ArrayList<>();
@@ -550,12 +529,9 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     speechBubblesRealXY = mapToRealXY(tmp, proportionMapping);
                     //to jest tak, bo musi byc w threadzie
                     List<Rectangle> finalSpeechBubblesRealXY = speechBubblesRealXY;
-                    threadHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            translatedPagesDetector.put(pageIdx, tmp);
-                            translatedPages.put(pageIdx, finalSpeechBubblesRealXY);
-                        }
+                    threadHandler.post(() -> {
+                        translatedPagesDetector.put(pageIdx, tmp);
+                        translatedPages.put(pageIdx, finalSpeechBubblesRealXY);
                     });
                     foundBubble = tappedRectangle(speechBubblesRealXY, thisPageXRealScale, thisPageYRealScale);
                     //^
@@ -572,7 +548,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 String translatedText = "";
                 List<Rectangle> newBubbleWords = new ArrayList<>();
 
-                if (Objects.isNull(foundBubble.getText())) {
+                if (!Objects.isNull(foundBubble) && Objects.isNull(foundBubble.getText())) {
                     String pathTesseract = getPathTess("eng.traineddata", getContext());
                     TessBaseAPI tess = new TessBaseAPI();
 
@@ -615,7 +591,6 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     text = text.trim().replaceAll(" +", " ");
 
                     if (!text.isEmpty() & !text.equals(" ")) {
-                        List<Rectangle> speechBubbleWords = new ArrayList<>();
                         text.toUpperCase();
                         Log.d("ocr", text + " " + text.length());
 
@@ -634,9 +609,12 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     }
                     //^
                 }
-                else {
+                else if (!Objects.isNull(foundBubble)) {
                     translatedText = foundBubble.getText();
+                } else {
+                    translatedText = "";
                 }
+
 
                 //jezeli visible to invis, i na odwrot
                 String finalTranslatedText = translatedText;
@@ -678,19 +656,29 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     }
                 }
                 //^
-                threadHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
+                threadHandler.post(() -> {
+                    if (!Objects.isNull(foundBubble)) {
                         foundBubble.setText(finalTranslatedText);
-                        if (!newBubbleWords.isEmpty()) {
-                            if (translatedPagesWords.containsKey(pageIdx)) {
-                                translatedPagesWords.get(pageIdx).addAll(newBubbleWords);
-                            }
-                            else {
-                                translatedPagesWords.put(pageIdx, newBubbleWords);
-                            }
+                    }
+                    if (!newBubbleWords.isEmpty()) {
+                        if (translatedPagesWords.containsKey(pageIdx)) {
+                            translatedPagesWords.get(pageIdx).addAll(newBubbleWords);
+                        }
+                        else {
+                            translatedPagesWords.put(pageIdx, newBubbleWords);
                         }
                     }
+                    mFindBubblesButton.setEnabled(true);
+                    mFindBubblesButton.setAlpha(.75f);
+                    mFindBubblesButton.setClickable(true);
+                    mTranslateWordButton.setEnabled(true);
+                    mTranslateWordButton.setAlpha(1f);
+                    mTranslateWordButton.setClickable(true);
+                    mToggleBubbleTranslateButton.setEnabled(true);
+                    mToggleBubbleTranslateButton.setAlpha(.75f);
+                    mToggleBubbleTranslateButton.setClickable(true);
+                    translateWordFlag = true;
+                    translateBubbleFlag = false;
                 });
 
                 //sprawdzenie czy sie tapnelo slowo:
@@ -737,7 +725,6 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         BubblesDetector bubblesDetector;
         BubblesClassifier bubblesClassifier;
 
-        Bitmap pdfPageAsBitmap;
 
         ExampleRunnable(int DDpi, File file, int pageIdx, Page page,
                         BubblesDetector bubblesDetector, BubblesClassifier bubblesClassifier) {
@@ -754,16 +741,25 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
             //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
             Log.d("THREAD_TEST", "startThread");
+            float translateWordButtonAlpha = mTranslateWordButton.getAlpha();
+            float toggleBubbleTranslateButtonAlpha = mToggleBubbleTranslateButton.getAlpha();
+            boolean prevTranslateWordFlag = translateWordFlag;
+            boolean prevTranslateBubbleFlag = translateBubbleFlag;
             try {
                 Handler threadHandler = new Handler(Looper.getMainLooper());
-                threadHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
-                        mFindBubblesButton.setEnabled(false);
-                        mFindBubblesButton.setAlpha(.35f);
-                        mFindBubblesButton.setClickable(false);
-                    }
+                threadHandler.post(() -> {
+                    //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
+                    translateWordFlag = false;
+                    translateBubbleFlag = false;
+                    mFindBubblesButton.setEnabled(false);
+                    mFindBubblesButton.setAlpha(.35f);
+                    mFindBubblesButton.setClickable(false);
+                    mTranslateWordButton.setEnabled(false);
+                    mTranslateWordButton.setAlpha(.35f);
+                    mTranslateWordButton.setClickable(false);
+                    mToggleBubbleTranslateButton.setEnabled(false);
+                    mToggleBubbleTranslateButton.setAlpha(.35f);
+                    mToggleBubbleTranslateButton.setClickable(false);
                 });
 
                 //to jest to co skanuje strone cala
@@ -786,12 +782,9 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     speechBubblesRealXY = mapToRealXY(tmp, proportionMapping);
                     //to jest tak, bo musi byc w threadzie
                     List<Rectangle> finalSpeechBubblesRealXY = speechBubblesRealXY;
-                    threadHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            translatedPagesDetector.put(pageIdx, tmp);
-                            translatedPages.put(pageIdx, finalSpeechBubblesRealXY);
-                        }
+                    threadHandler.post(() -> {
+                        translatedPagesDetector.put(pageIdx, tmp);
+                        translatedPages.put(pageIdx, finalSpeechBubblesRealXY);
                     });
                     //^
 
@@ -871,7 +864,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                         text = WordCheck.removeSingleChars(text);
 
                         text = text.trim().replaceAll(" +", " ");
-                        if (text.isEmpty() | text == " ") {
+                        if (text.isEmpty() | text.equals(" ")) {
                             continue;
                         }
                         text.toUpperCase();
@@ -912,22 +905,27 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 }
 
                 Page finalPage = page2;
-                threadHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Log.d("THREAD_TEST", "startUIThread");
-                        //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
-                        mFindBubblesButton.setEnabled(true);
-                        mFindBubblesButton.setAlpha(.75f);
-                        mFindBubblesButton.setClickable(true);
-                        page.setOrig_image(finalPage.getOrig_image());
-                        page.setSpeech_bubbles(finalPage.getSpeech_bubbles());
-                        page.setRejected_speech_bubbles(finalPage.getRejected_speech_bubbles());
-                        translatedPages.put(pageIdx, translatedPagesCopy);
-                        translatedPagesWords.put(pageIdx, speechBubblesWordsRealXY);
-                        pdfView.invalidate();
-                        Log.d("THREAD_TEST", "endUIThread");
-                    }
+                threadHandler.post(() -> {
+                    Log.d("THREAD_TEST", "startUIThread");
+                    //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
+                    mFindBubblesButton.setEnabled(true);
+                    mFindBubblesButton.setAlpha(.75f);
+                    mFindBubblesButton.setClickable(true);
+                    mTranslateWordButton.setEnabled(true);
+                    mTranslateWordButton.setAlpha(translateWordButtonAlpha);
+                    mTranslateWordButton.setClickable(true);
+                    mToggleBubbleTranslateButton.setEnabled(true);
+                    mToggleBubbleTranslateButton.setAlpha(toggleBubbleTranslateButtonAlpha);
+                    mToggleBubbleTranslateButton.setClickable(true);
+                    page.setOrig_image(finalPage.getOrig_image());
+                    page.setSpeech_bubbles(finalPage.getSpeech_bubbles());
+                    page.setRejected_speech_bubbles(finalPage.getRejected_speech_bubbles());
+                    translatedPages.put(pageIdx, translatedPagesCopy);
+                    translatedPagesWords.put(pageIdx, speechBubblesWordsRealXY);
+                    translateWordFlag = prevTranslateWordFlag;
+                    translateBubbleFlag = prevTranslateBubbleFlag;
+                    pdfView.invalidate();
+                    Log.d("THREAD_TEST", "endUIThread");
                 });
             } catch (Exception e) {
                 e.printStackTrace();
@@ -982,7 +980,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
     private static String getPathTess(String file, Context context) {
         AssetManager assetManager = context.getAssets();
-        BufferedInputStream inputStream = null;
+        BufferedInputStream inputStream;
         try {
             // Read data from assets.
             inputStream = new BufferedInputStream(assetManager.open(file));
@@ -1021,30 +1019,32 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 textPaint.setColor(Color.BLACK);
                 Log.d("page", String.valueOf(page.getOrig_image()));
                 for (Rectangle bubble : translatedPages.get(pdfView.getCurrentPage())) {
-                    if (bubble.isVisible()) {
-                        Log.d("Bubble", String.valueOf(bubble));
-                        int startX = (int) (bubble.getStartX() * pdfView.getZoom());
-                        int startY = (int) (bubble.getStartY() * pdfView.getZoom());
-                        int endX = (int) (bubble.getEndX() * pdfView.getZoom());
-                        int endY = (int) (bubble.getEndY() * pdfView.getZoom());
-                        Log.d("background_color", String.valueOf(bubble.getBackground_color()));
-                        paintBG.setColor(Color.rgb(bubble.getBackground_color().get(0),
-                                bubble.getBackground_color().get(1),
-                                bubble.getBackground_color().get(2)));
-                        canvas.drawRect(startX, startY, endX, endY, paintBG);
-                        RectF rect = new RectF(startX, startY, endX, endY);
-                        Rectangle rectangle = new Rectangle(startX, startY, endX, endY);
-                        rectangle.setText(bubble.getText());
-                        float fontSize = rectangle.getOptTextSize();
-                        textPaint.setTextSize(fontSize);
-                        StaticLayout sl = new StaticLayout(rectangle.getText(), textPaint,
-                                rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
-                                1, 1, false);
-                        canvas.save();
-                        canvas.translate(rect.left, rect.top);
-                        sl.draw(canvas);
-                        canvas.restore();
+                    if (Objects.isNull(bubble) || !bubble.isVisible() ||
+                            Objects.isNull(bubble.getText()) || bubble.getText().equals("")) {
+                        continue;
                     }
+                    Log.d("Bubble", String.valueOf(bubble));
+                    int startX = (int) (bubble.getStartX() * pdfView.getZoom());
+                    int startY = (int) (bubble.getStartY() * pdfView.getZoom());
+                    int endX = (int) (bubble.getEndX() * pdfView.getZoom());
+                    int endY = (int) (bubble.getEndY() * pdfView.getZoom());
+                    Log.d("background_color", String.valueOf(bubble.getBackground_color()));
+                    paintBG.setColor(Color.rgb(bubble.getBackground_color().get(0),
+                            bubble.getBackground_color().get(1),
+                            bubble.getBackground_color().get(2)));
+                    canvas.drawRect(startX, startY, endX, endY, paintBG);
+                    RectF rect = new RectF(startX, startY, endX, endY);
+                    Rectangle rectangle = new Rectangle(startX, startY, endX, endY);
+                    rectangle.setText(bubble.getText());
+                    float fontSize = rectangle.getOptTextSize();
+                    textPaint.setTextSize(fontSize);
+                    StaticLayout sl = new StaticLayout(rectangle.getText(), textPaint,
+                            rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
+                            1, 1, false);
+                    canvas.save();
+                    canvas.translate(rect.left, rect.top);
+                    sl.draw(canvas);
+                    canvas.restore();
                 }
             }
         }
@@ -1073,15 +1073,12 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
                 Handler threadHandler = new Handler(Looper.getMainLooper());
 
-                threadHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Log.d("THREAD_TEST", "startUIThread");
-                        //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
-                        page.setOrig_image(page2.getOrig_image());
-                        pdfPageAsBitmap = pdfPageAsBitmap2;
-                        Log.d("THREAD_TEST", "endUIThread");
-                    }
+                threadHandler.post(() -> {
+                    Log.d("THREAD_TEST", "startUIThread");
+                    //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
+                    page.setOrig_image(page2.getOrig_image());
+                    pdfPageAsBitmap = pdfPageAsBitmap2;
+                    Log.d("THREAD_TEST", "endUIThread");
                 });
             } catch (Exception e) {
                 e.printStackTrace();
@@ -1155,6 +1152,24 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
             //thisPageX, <mappedY> = piksel AKTUALNEJ STRONY, jezeli jest przyblizona, to wtedy przyblizonej
             //thisPageXRealScale, thisPageYRealScale = piksel AKTUALNEJ STRONY, jezeli jest przyblizona, to i tak zwraca normalne wymiary
 
+            boolean prevTranslateBubbleFlag = translateBubbleFlag;
+            boolean prevTranslateWordFlag = translateWordFlag;
+
+
+            if (prevTranslateBubbleFlag | prevTranslateWordFlag) {
+                mFindBubblesButton.setEnabled(false);
+                mFindBubblesButton.setAlpha(.35f);
+                mFindBubblesButton.setClickable(false);
+                mTranslateWordButton.setEnabled(false);
+                mTranslateWordButton.setAlpha(.35f);
+                mTranslateWordButton.setClickable(false);
+                mToggleBubbleTranslateButton.setEnabled(false);
+                mToggleBubbleTranslateButton.setAlpha(.35f);
+                mToggleBubbleTranslateButton.setClickable(false);
+                translateBubbleFlag = false;
+                translateWordFlag = false;
+            }
+
             if (cumXOffset.isEmpty()) {
                 this.updateCumXOffset();
             }
@@ -1183,8 +1198,8 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
             Log.d("ONTAPTEST", "onePageWidth = " + onePageWidth + " | onePageHeight = " + onePageHeight);*/
 
 
-            float thisPageX = 0f;
-            float thisPageXRealScale = 0f;
+            float thisPageX;
+            float thisPageXRealScale;
             if (pageIdx != 0) {
                 thisPageX = mappedX - cumXOffset.get(pageIdx-1) * pdfView.getZoom();
             } else {
@@ -1196,7 +1211,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
             Log.d("ONTAPTEST", "thisPageX = " + thisPageX + " | mappedY = " + mappedY);
             Log.d("ONTAPTEST", "thisPageXRealScale = " + thisPageXRealScale + " | thisPageYRealScale = " + thisPageYRealScale);
 
-            if (translateBubbleFlag) {
+            if (prevTranslateBubbleFlag) {
                 try {
                     int DDpi = getResources().getDisplayMetrics().densityDpi;
                     BubbleRunnable runnable = new BubbleRunnable(DDpi, file, pdfView.getCurrentPage(),
@@ -1278,7 +1293,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
             }
 
             //jednego slowa
-            if (translateWordFlag) {
+            if (prevTranslateWordFlag) {
                 try {
                     int DDpi = getResources().getDisplayMetrics().densityDpi;
                     WordRunnable runnable = new WordRunnable(DDpi, file, pdfView.getCurrentPage(),
