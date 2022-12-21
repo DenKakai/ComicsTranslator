@@ -1,17 +1,7 @@
 package com.example.pdfreader2;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.viewpager.widget.ViewPager;
-
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -19,56 +9,39 @@ import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
-import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.pdf.PdfRenderer;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
-import android.provider.MediaStore;
-import android.provider.Settings;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.view.View;
-import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.Toast;
-import android.os.Process;
 
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.deepl.api.TextResult;
+import com.deepl.api.Translator;
 import com.github.barteksc.pdfviewer.PDFView;
-import com.github.barteksc.pdfviewer.listener.Callbacks;
-import com.github.barteksc.pdfviewer.listener.OnDrawListener;
-import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
-import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.googlecode.tesseract.android.TessBaseAPI;
-import com.shockwave.pdfium.util.SizeF;
-
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
-
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
-import org.opencv.core.Rect;
-import org.opencv.imgproc.Imgproc;
 
 
 public class PdfViewerActivity extends AppCompatActivity implements ExampleDialog.ExampleDialogListener{
@@ -84,16 +57,18 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
     private ImageButton mJumpToPageButton;
 
     private Page page = new Page();
-    private ArrayList<Bitmap> pdfAsListOfBitmaps;
-    private Handler mainHandler = new Handler();
     private List<Integer> cumXOffset = new ArrayList<>();
 
-    private Map<Integer, List<Rectangle>> translatedPages = new HashMap<Integer, List<Rectangle>>();
-    private Map<Integer, List<Rectangle>> translatedPagesWords = new HashMap<Integer, List<Rectangle>>();
+    private Map<Integer, List<Rectangle>> translatedPages = new HashMap<>();
+    private Map<Integer, List<Rectangle>> translatedPagesWords = new HashMap<>();
+    private Map<Integer, List<Rectangle>> translatedPagesDetector = new HashMap<>();
     File file;
     Bitmap pdfPageAsBitmap;
     boolean translateBubbleFlag = false;
     boolean translateWordFlag = false;
+
+    BubblesClassifier bubblesClassifier;
+    BubblesDetector bubblesDetector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -125,37 +100,29 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         //przyblizenie
         mZoomInButton = findViewById(R.id.zoomIn);
         mZoomInButton.setAlpha(0.75f);
-        mZoomInButton.setOnClickListener(new View.OnClickListener() {
+        mZoomInButton.setOnClickListener(view -> {
+            int curPage = pdfView.getCurrentPage();
 
-            @Override
-            public void onClick(View view) {
-                int curPage = pdfView.getCurrentPage();
-
-                if (pdfView.getZoom() < 5f) {
-                    pdfView.zoomTo(pdfView.getZoom() + 1f);
-                    pdfView.jumpTo(curPage);
-                    pdfView.loadPages();
-                }
-
-                if (pdfView.getZoom() == 5f) {
-                    mZoomInButton.setEnabled(false);
-                    mZoomInButton.setAlpha(.35f);
-                    mZoomInButton.setClickable(false);
-
-                    mZoomOutButton.setEnabled(true);
-                    mZoomOutButton.setAlpha(1f);
-                    mZoomOutButton.setClickable(true);
-                } else
-                {
-                    mZoomInButton.setEnabled(true);
-                    mZoomInButton.setAlpha(1f);
-                    mZoomInButton.setClickable(true);
-
-                    mZoomOutButton.setEnabled(true);
-                    mZoomOutButton.setAlpha(1f);
-                    mZoomOutButton.setClickable(true);
-                }
+            if (pdfView.getZoom() < 5f) {
+                pdfView.zoomTo(pdfView.getZoom() + 1f);
+                pdfView.jumpTo(curPage);
+                pdfView.loadPages();
             }
+
+            if (pdfView.getZoom() == 5f) {
+                mZoomInButton.setEnabled(false);
+                mZoomInButton.setAlpha(.35f);
+                mZoomInButton.setClickable(false);
+
+            } else {
+                mZoomInButton.setEnabled(true);
+                mZoomInButton.setAlpha(1f);
+                mZoomInButton.setClickable(true);
+
+            }
+            mZoomOutButton.setEnabled(true);
+            mZoomOutButton.setAlpha(1f);
+            mZoomOutButton.setClickable(true);
         });
 
 
@@ -166,52 +133,44 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         mZoomOutButton.setAlpha(.35f);
         mZoomOutButton.setClickable(false);
 
-        mZoomOutButton.setOnClickListener(new View.OnClickListener() {
+        mZoomOutButton.setOnClickListener(view -> {
+            int curPage = pdfView.getCurrentPage();
+            float curZoom = pdfView.getZoom();
 
-            @Override
-            public void onClick(View view) {
-                int curPage = pdfView.getCurrentPage();
-                float curZoom = pdfView.getZoom();
-
-                if (curZoom >= 2f) {
-                    pdfView.zoomTo(curZoom - 1f);
-                    pdfView.jumpTo(curPage);
-                    pdfView.loadPages();
-                } else if (curZoom > 1f){
-                    pdfView.zoomTo(1f);
-                    pdfView.jumpTo(curPage);
-                    pdfView.loadPages();
-                }
-
-                if (pdfView.getZoom() == 1f) {
-                    mZoomOutButton.setEnabled(false);
-                    mZoomOutButton.setAlpha(.35f);
-                    mZoomOutButton.setClickable(false);
-
-                } else
-                {
-                    mZoomOutButton.setEnabled(true);
-                    mZoomOutButton.setAlpha(0.75f);
-                    mZoomOutButton.setClickable(true);
-
-                }
-                mZoomInButton.setEnabled(true);
-                mZoomInButton.setAlpha(0.75f);
-                mZoomInButton.setClickable(true);
+            if (curZoom >= 2f) {
+                pdfView.zoomTo(curZoom - 1f);
+                pdfView.jumpTo(curPage);
+                pdfView.loadPages();
+            } else if (curZoom > 1f){
+                pdfView.zoomTo(1f);
+                pdfView.jumpTo(curPage);
+                pdfView.loadPages();
             }
+
+            if (pdfView.getZoom() == 1f) {
+                mZoomOutButton.setEnabled(false);
+                mZoomOutButton.setAlpha(.35f);
+                mZoomOutButton.setClickable(false);
+
+            } else
+            {
+                mZoomOutButton.setEnabled(true);
+                mZoomOutButton.setAlpha(0.75f);
+                mZoomOutButton.setClickable(true);
+
+            }
+            mZoomInButton.setEnabled(true);
+            mZoomInButton.setAlpha(0.75f);
+            mZoomInButton.setClickable(true);
         });
 
         //zmiana strony w lewo
         mPageLeftButton = findViewById(R.id.pageLeft);
         mPageLeftButton.setAlpha(0.75f);
-        mPageLeftButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                int curPage = pdfView.getCurrentPage();
-                if (curPage >= 1) {
-                    pdfView.jumpTo(curPage - 1);
-                }
+        mPageLeftButton.setOnClickListener(view -> {
+            int curPage = pdfView.getCurrentPage();
+            if (curPage >= 1) {
+                pdfView.jumpTo(curPage - 1);
             }
         });
 
@@ -219,14 +178,10 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         //zmiana strony w prawo
         mPageRightButton = findViewById(R.id.pageRight);
         mPageRightButton.setAlpha(0.75f);
-        mPageRightButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                int curPage = pdfView.getCurrentPage();
-                if (curPage < pdfView.getPageCount() - 1) {
-                    pdfView.jumpTo(curPage + 1);
-                }
+        mPageRightButton.setOnClickListener(view -> {
+            int curPage = pdfView.getCurrentPage();
+            if (curPage < pdfView.getPageCount() - 1) {
+                pdfView.jumpTo(curPage + 1);
             }
         });
 
@@ -234,49 +189,41 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
         Log.d("THREAD_TEST", "startOfEast");
         String pathEast = getPath("frozen_east_text_detection.pb", this);
-        BubblesDetector bubblesDetector = new BubblesDetector(pathEast);
+        bubblesDetector = new BubblesDetector(pathEast);
         Log.d("THREAD_TEST", "endOfEast");
 
         Log.d("THREAD_TEST", "startOfANN");
         String pathAnn = getPath("ANN_BubbleClassifier.yml", this);
-        BubblesClassifier bubblesClassifier = new BubblesClassifier(pathAnn);
+        bubblesClassifier = new BubblesClassifier(pathAnn);
         Log.d("THREAD_TEST", "endOfANN");
 
 
 
         mFindBubblesButton = findViewById(R.id.findBubbles);
         mFindBubblesButton.setAlpha(0.75f);
-        mFindBubblesButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                //mFindBubblesButton.setEnabled(false);
-                page = new Page();
-                int DDpi = getResources().getDisplayMetrics().densityDpi;
-                ExampleRunnable runnable = new ExampleRunnable(DDpi, file, pdfView.getCurrentPage(),
-                        page, bubblesDetector, bubblesClassifier);
-                new Thread(runnable).start();
-            }
+        mFindBubblesButton.setOnClickListener(view -> {
+            //mFindBubblesButton.setEnabled(false);
+            page = new Page();
+            int DDpi = getResources().getDisplayMetrics().densityDpi;
+            ExampleRunnable runnable = new ExampleRunnable(DDpi, file, pdfView.getCurrentPage(),
+                    page, bubblesDetector, bubblesClassifier);
+            new Thread(runnable).start();
         });
 
         //tlumaczenie chmurki
 
         mToggleBubbleTranslateButton = findViewById(R.id.toggleBubbleTranslate);
         mToggleBubbleTranslateButton.setAlpha(0.75f);
-        mToggleBubbleTranslateButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                if (translateBubbleFlag) {
-                    mToggleBubbleTranslateButton.setAlpha(0.75f);
-                    translateBubbleFlag = false;
-                }
-                else {
-                    mToggleBubbleTranslateButton.setAlpha(1f);
-                    translateBubbleFlag = true;
-                    mTranslateWordButton.setAlpha(0.75f);
-                    translateWordFlag = false;
-                }
+        mToggleBubbleTranslateButton.setOnClickListener(view -> {
+            if (translateBubbleFlag) {
+                mToggleBubbleTranslateButton.setAlpha(0.75f);
+                translateBubbleFlag = false;
+            }
+            else {
+                mToggleBubbleTranslateButton.setAlpha(1f);
+                translateBubbleFlag = true;
+                mTranslateWordButton.setAlpha(0.75f);
+                translateWordFlag = false;
             }
         });
 
@@ -284,22 +231,18 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
         mTranslateWordButton = findViewById(R.id.translateWordButton);
         mTranslateWordButton.setAlpha(0.75f);
-        mTranslateWordButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                //translatedPages.remove(pdfView.getCurrentPage());
-                //pdfView.invalidate();
-                if (translateWordFlag) {
-                    mTranslateWordButton.setAlpha(0.75f);
-                    translateWordFlag = false;
-                }
-                else {
-                    mTranslateWordButton.setAlpha(1f);
-                    translateWordFlag = true;
-                    translateBubbleFlag = false;
-                    mToggleBubbleTranslateButton.setAlpha(0.75f);
-                }
+        mTranslateWordButton.setOnClickListener(view -> {
+            //translatedPages.remove(pdfView.getCurrentPage());
+            //pdfView.invalidate();
+            if (translateWordFlag) {
+                mTranslateWordButton.setAlpha(0.75f);
+                translateWordFlag = false;
+            }
+            else {
+                mTranslateWordButton.setAlpha(1f);
+                translateWordFlag = true;
+                translateBubbleFlag = false;
+                mToggleBubbleTranslateButton.setAlpha(0.75f);
             }
         });
 
@@ -307,13 +250,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
         mJumpToPageButton = findViewById(R.id.jumpToPage);
         mJumpToPageButton.setAlpha(0.75f);
-        mJumpToPageButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                openDialog();
-            }
-        });
+        mJumpToPageButton.setOnClickListener(view -> openDialog());
     }
 
     public void openDialog() {
@@ -335,7 +272,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
     private static String getPath(String file, Context context) {
         //okazalo sie, ze to jest sciezka do assetow: context.getFilesDir().getAbsolutePath()
         AssetManager assetManager = context.getAssets();
-        BufferedInputStream inputStream = null;
+        BufferedInputStream inputStream;
         try {
             // Read data from assets.
             inputStream = new BufferedInputStream(assetManager.open(file));
@@ -355,6 +292,418 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         return context.getFilesDir().getAbsolutePath() + "/" + file;
     }
 
+    class BubbleRunnable implements Runnable {
+        int DDpi;
+        File file;
+        int pageIdx;
+        Page page;
+        BubblesDetector bubblesDetector;
+        BubblesClassifier bubblesClassifier;
+        float thisPageXRealScale;
+        float thisPageYRealScale;
+
+        BubbleRunnable(int DDpi, File file, int pageIdx, Page page,
+                       BubblesDetector bubblesDetector, BubblesClassifier bubblesClassifier,
+                       float thisPageXRealScale, float thisPageYRealScale) {
+            this.DDpi = DDpi;
+            this.file = file;
+            this.pageIdx = pageIdx;
+            this.page = page;
+            this.bubblesDetector = bubblesDetector;
+            this.bubblesClassifier = bubblesClassifier;
+            this.thisPageXRealScale = thisPageXRealScale;
+            this.thisPageYRealScale = thisPageYRealScale;
+        }
+
+        @Override
+        public void run() {
+
+            Log.d("THREAD_TEST", "startThread");
+            try {
+                //to jest to co skanuje strone cala
+                Page page2 = new Page(pdfPageToBitmap(file, pageIdx));
+                Rectangle foundBubble;
+
+                float onePageWidth = pdfView.getPageSize(pageIdx).getWidth();
+                float pageDetectorWidth = page2.getOrig_image().cols();
+                float proportionMapping = pageDetectorWidth / onePageWidth;
+
+                List<Rectangle> speechBubblesRealXY = new ArrayList<>();
+
+                Handler threadHandler = new Handler(Looper.getMainLooper());
+                if (!translatedPagesDetector.containsKey(pageIdx)) {
+                    page2 = scanPage(file, pageIdx, bubblesDetector, bubblesClassifier);
+                    List<Rectangle> tmp = new ArrayList<>();
+                    tmp.addAll(page2.getSpeech_bubbles());
+                    tmp.addAll(page2.getRejected_speech_bubbles());
+
+                    Log.d("THREAD_TEST", "startChangingXYToReal");
+                    speechBubblesRealXY = mapToRealXY(tmp, proportionMapping);
+                    //to jest tak, bo musi byc w threadzie
+                    List<Rectangle> finalSpeechBubblesRealXY = speechBubblesRealXY;
+                    threadHandler.post(() -> {
+                        translatedPagesDetector.put(pageIdx, tmp);
+                        translatedPages.put(pageIdx, finalSpeechBubblesRealXY);
+                    });
+                    foundBubble = tappedRectangle(speechBubblesRealXY, thisPageXRealScale, thisPageYRealScale);
+                    //^
+                }
+                else {
+                    foundBubble = tappedRectangle(translatedPages.get(pageIdx), thisPageXRealScale, thisPageYRealScale);
+                }
+                //^
+
+                //tutaj pisac
+                Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
+
+                //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
+                String translatedText = "";
+                List<Rectangle> newBubbleWords = new ArrayList<>();
+
+                if (!Objects.isNull(foundBubble) && Objects.isNull(foundBubble.getText())) {
+                    String pathTesseract = getPathTess("eng.traineddata", getContext());
+                    TessBaseAPI tess = new TessBaseAPI();
+
+                    if (!tess.init(pathTesseract, "eng")) {
+                        Log.d("TESTTESSERACT", "nie dziala");
+                        // Error initializing Tesseract (wrong data path or language)
+                        tess.recycle();
+                    }
+
+                    Rectangle tappedRect = new Rectangle(
+                            (int) (foundBubble.getStartX() * proportionMapping),
+                            (int) (foundBubble.getStartY() * proportionMapping),
+                            (int) (foundBubble.getEndX() * proportionMapping),
+                            (int) (foundBubble.getEndY() * proportionMapping));
+                    translatedText = translateBubble(tappedRect, page2, tess);
+                    Log.d("translatedText", translatedText);
+
+                    // i dorobic slowa
+                    //TODO: nie ma tutaj uzytych dwoch modeli wiec robie tylko na jednym, nie wiem jak powinno byc???
+
+                        /*String box_2 = tess.getBoxText(0);
+                        int c2 = tess.meanConfidence();
+                        Log.d("confidence", c1 + " " + c2);*/
+
+                    String text = "";
+                    String box = "";
+                        /*if (c2 > c1) {
+                            text = text_2;
+                            box = box_2;
+                        } else {
+                            text = text_1;
+                            box = box_1;
+                        }*/
+                    text = tess.getUTF8Text();
+                    box = tess.getBoxText(0);
+
+
+                    text = WordCheck.removeSingleChars(text);
+
+                    text = text.trim().replaceAll(" +", " ");
+
+                    if (!text.isEmpty() & !text.equals(" ")) {
+                        text.toUpperCase();
+                        Log.d("ocr", text + " " + text.length());
+
+                        List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
+
+
+                        for (Rectangle bubbleWord : bubbleWords) {
+                            Rectangle rectangle_new = new Rectangle(
+                                    (int) ((tappedRect.getStartX() + bubbleWord.getStartX()) / proportionMapping),
+                                    (int) ((tappedRect.getEndY() - bubbleWord.getEndY()) / proportionMapping),
+                                    (int) ((tappedRect.getStartX() + bubbleWord.getEndX()) / proportionMapping),
+                                    (int) ((tappedRect.getEndY() - bubbleWord.getStartY()) / proportionMapping));
+                            rectangle_new.setText(bubbleWord.getText());
+                            newBubbleWords.add(rectangle_new);
+                        }
+                    }
+                    //^
+                }
+                else if (!Objects.isNull(foundBubble)) {
+                    translatedText = foundBubble.getText();
+                } else {
+                    translatedText = "";
+                }
+
+                //jezeli visible to invis, i na odwrot
+                String finalTranslatedText = translatedText;
+                threadHandler.post(() -> {
+                    if (!Objects.isNull(foundBubble)) {
+                        foundBubble.setVisible(!foundBubble.isVisible());
+                        foundBubble.setText(finalTranslatedText);
+                    }
+                    if (!newBubbleWords.isEmpty()) {
+                        if (translatedPagesWords.containsKey(pageIdx)) {
+                            translatedPagesWords.get(pageIdx).addAll(newBubbleWords);
+                        }
+                        else {
+                            translatedPagesWords.put(pageIdx, newBubbleWords);
+                        }
+                    }
+                    mFindBubblesButton.setEnabled(true);
+                    mFindBubblesButton.setAlpha(.75f);
+                    mFindBubblesButton.setClickable(true);
+                    mTranslateWordButton.setEnabled(true);
+                    mTranslateWordButton.setAlpha(.75f);
+                    mTranslateWordButton.setClickable(true);
+                    mToggleBubbleTranslateButton.setEnabled(true);
+                    mToggleBubbleTranslateButton.setAlpha(1f);
+                    mToggleBubbleTranslateButton.setClickable(true);
+                    translateWordFlag = false;
+                    translateBubbleFlag = true;
+                    pdfView.invalidate();
+                });
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+    class WordRunnable implements Runnable {
+        int DDpi;
+        File file;
+        int pageIdx;
+        Page page;
+        BubblesDetector bubblesDetector;
+        BubblesClassifier bubblesClassifier;
+        float thisPageXRealScale;
+        float thisPageYRealScale;
+
+        WordRunnable(int DDpi, File file, int pageIdx, Page page,
+                       BubblesDetector bubblesDetector, BubblesClassifier bubblesClassifier,
+                       float thisPageXRealScale, float thisPageYRealScale) {
+            this.DDpi = DDpi;
+            this.file = file;
+            this.pageIdx = pageIdx;
+            this.page = page;
+            this.bubblesDetector = bubblesDetector;
+            this.bubblesClassifier = bubblesClassifier;
+            this.thisPageXRealScale = thisPageXRealScale;
+            this.thisPageYRealScale = thisPageYRealScale;
+        }
+
+        @Override
+        public void run() {
+
+            Log.d("THREAD_TEST", "startThread");
+            try {
+                //to jest to co skanuje strone cala
+                Page page2 = new Page(pdfPageToBitmap(file, pageIdx));
+                Rectangle foundBubble;
+
+                float onePageWidth = pdfView.getPageSize(pageIdx).getWidth();
+                float pageDetectorWidth = page2.getOrig_image().cols();
+                float proportionMapping = pageDetectorWidth / onePageWidth;
+
+                Handler threadHandler = new Handler(Looper.getMainLooper());
+
+                threadHandler.post(() -> {
+                    mFindBubblesButton.setEnabled(false);
+                    mFindBubblesButton.setAlpha(.35f);
+                    mFindBubblesButton.setClickable(false);
+                });
+
+                List<Rectangle> speechBubblesRealXY = new ArrayList<>();
+
+
+                if (!translatedPagesDetector.containsKey(pageIdx)) {
+                    page2 = scanPage(file, pageIdx, bubblesDetector, bubblesClassifier);
+                    List<Rectangle> tmp = new ArrayList<>();
+                    tmp.addAll(page2.getSpeech_bubbles());
+                    tmp.addAll(page2.getRejected_speech_bubbles());
+
+                    Log.d("THREAD_TEST", "startChangingXYToReal");
+                    speechBubblesRealXY = mapToRealXY(tmp, proportionMapping);
+                    //to jest tak, bo musi byc w threadzie
+                    List<Rectangle> finalSpeechBubblesRealXY = speechBubblesRealXY;
+                    threadHandler.post(() -> {
+                        translatedPagesDetector.put(pageIdx, tmp);
+                        translatedPages.put(pageIdx, finalSpeechBubblesRealXY);
+                    });
+                    foundBubble = tappedRectangle(speechBubblesRealXY, thisPageXRealScale, thisPageYRealScale);
+                    //^
+                }
+                else {
+                    foundBubble = tappedRectangle(translatedPages.get(pageIdx), thisPageXRealScale, thisPageYRealScale);
+                }
+                //^
+
+                //tutaj pisac
+                Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
+
+                //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
+                String translatedText = "";
+                List<Rectangle> newBubbleWords = new ArrayList<>();
+
+                if (!Objects.isNull(foundBubble) && Objects.isNull(foundBubble.getText())) {
+                    String pathTesseract = getPathTess("eng.traineddata", getContext());
+                    TessBaseAPI tess = new TessBaseAPI();
+
+                    if (!tess.init(pathTesseract, "eng")) {
+                        Log.d("TESTTESSERACT", "nie dziala");
+                        // Error initializing Tesseract (wrong data path or language)
+                        tess.recycle();
+                    }
+
+                    Rectangle tappedRect = new Rectangle(
+                            (int) (foundBubble.getStartX() * proportionMapping),
+                            (int) (foundBubble.getStartY() * proportionMapping),
+                            (int) (foundBubble.getEndX() * proportionMapping),
+                            (int) (foundBubble.getEndY() * proportionMapping));
+                    translatedText = translateBubble(tappedRect, page2, tess);
+                    Log.d("translatedText", translatedText);
+
+                    // i dorobic slowa
+                    //TODO: nie ma tutaj uzytych dwoch modeli wiec robie tylko na jednym, nie wiem jak powinno byc???
+
+                        /*String box_2 = tess.getBoxText(0);
+                        int c2 = tess.meanConfidence();
+                        Log.d("confidence", c1 + " " + c2);*/
+
+                    String text = "";
+                    String box = "";
+                        /*if (c2 > c1) {
+                            text = text_2;
+                            box = box_2;
+                        } else {
+                            text = text_1;
+                            box = box_1;
+                        }*/
+                    text = tess.getUTF8Text();
+                    box = tess.getBoxText(0);
+
+
+                    text = WordCheck.removeSingleChars(text);
+
+                    text = text.trim().replaceAll(" +", " ");
+
+                    if (!text.isEmpty() & !text.equals(" ")) {
+                        text.toUpperCase();
+                        Log.d("ocr", text + " " + text.length());
+
+                        List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
+
+
+                        for (Rectangle bubbleWord : bubbleWords) {
+                            Rectangle rectangle_new = new Rectangle(
+                                    (int) ((tappedRect.getStartX() + bubbleWord.getStartX()) / proportionMapping),
+                                    (int) ((tappedRect.getEndY() - bubbleWord.getEndY()) / proportionMapping),
+                                    (int) ((tappedRect.getStartX() + bubbleWord.getEndX()) / proportionMapping),
+                                    (int) ((tappedRect.getEndY() - bubbleWord.getStartY()) / proportionMapping));
+                            rectangle_new.setText(bubbleWord.getText());
+                            newBubbleWords.add(rectangle_new);
+                        }
+                    }
+                    //^
+                }
+                else if (!Objects.isNull(foundBubble)) {
+                    translatedText = foundBubble.getText();
+                } else {
+                    translatedText = "";
+                }
+
+
+                //jezeli visible to invis, i na odwrot
+                String finalTranslatedText = translatedText;
+                //merge lista do szukanai tapnietego slowa
+                List<Rectangle> possibleWords = new ArrayList<>();
+                if (!newBubbleWords.isEmpty()) {
+                    if (translatedPagesWords.containsKey(pageIdx)) {
+                        for (Rectangle word : translatedPagesWords.get(pageIdx)) {
+                            Rectangle rectangle_new = new Rectangle(
+                                    word.getStartX(),
+                                    word.getStartY(),
+                                    word.getEndX(),
+                                    word.getEndY());
+                            rectangle_new.setText(word.getText());
+                            possibleWords.add(rectangle_new);
+                        }
+                    }
+                    for (Rectangle word : newBubbleWords) {
+                        Rectangle rectangle_new = new Rectangle(
+                                word.getStartX(),
+                                word.getStartY(),
+                                word.getEndX(),
+                                word.getEndY());
+                        rectangle_new.setText(word.getText());
+                        possibleWords.add(rectangle_new);
+                    }
+                }
+                else {
+                    if (translatedPagesWords.containsKey(pageIdx)) {
+                        for (Rectangle word : translatedPagesWords.get(pageIdx)) {
+                            Rectangle rectangle_new = new Rectangle(
+                                    word.getStartX(),
+                                    word.getStartY(),
+                                    word.getEndX(),
+                                    word.getEndY());
+                            rectangle_new.setText(word.getText());
+                            possibleWords.add(rectangle_new);
+                        }
+                    }
+                }
+                //^
+                threadHandler.post(() -> {
+                    if (!Objects.isNull(foundBubble)) {
+                        foundBubble.setText(finalTranslatedText);
+                    }
+                    if (!newBubbleWords.isEmpty()) {
+                        if (translatedPagesWords.containsKey(pageIdx)) {
+                            translatedPagesWords.get(pageIdx).addAll(newBubbleWords);
+                        }
+                        else {
+                            translatedPagesWords.put(pageIdx, newBubbleWords);
+                        }
+                    }
+                    mFindBubblesButton.setEnabled(true);
+                    mFindBubblesButton.setAlpha(.75f);
+                    mFindBubblesButton.setClickable(true);
+                    mTranslateWordButton.setEnabled(true);
+                    mTranslateWordButton.setAlpha(1f);
+                    mTranslateWordButton.setClickable(true);
+                    mToggleBubbleTranslateButton.setEnabled(true);
+                    mToggleBubbleTranslateButton.setAlpha(.75f);
+                    mToggleBubbleTranslateButton.setClickable(true);
+                    translateWordFlag = true;
+                    translateBubbleFlag = false;
+                });
+
+                //sprawdzenie czy sie tapnelo slowo:
+                Rectangle foundBubbleWord = null;
+                if (!possibleWords.isEmpty()) {
+                    foundBubbleWord = tappedRectangle(possibleWords, thisPageXRealScale, thisPageYRealScale);
+                }
+                if (!Objects.isNull(foundBubbleWord)) {
+                    //robi tlumaczenie tekstu
+
+
+                    String text = foundBubbleWord.getText();
+                    text = WordCheck.removeSingleChars(text);
+                    String tlum = "";
+                    try {
+                        String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+                        Translator translator = new Translator(authKey);
+                        TextResult result =
+                                translator.translateText(text, null, "pl");
+                        tlum = result.getText().replace("Š", "Ą");
+                        Log.d("tlum", text + " | " + tlum);
+                    } catch (Exception e2) {
+                        e2.printStackTrace();
+                    }
+                    //otworzyc dialog
+                    openDialogWord(foundBubbleWord.getText(), tlum);
+                }
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     class ExampleRunnable implements Runnable {
         int DDpi;
         File file;
@@ -363,7 +712,6 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         BubblesDetector bubblesDetector;
         BubblesClassifier bubblesClassifier;
 
-        Bitmap pdfPageAsBitmap;
 
         ExampleRunnable(int DDpi, File file, int pageIdx, Page page,
                         BubblesDetector bubblesDetector, BubblesClassifier bubblesClassifier) {
@@ -380,43 +728,57 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
             //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
             Log.d("THREAD_TEST", "startThread");
+            float translateWordButtonAlpha = mTranslateWordButton.getAlpha();
+            float toggleBubbleTranslateButtonAlpha = mToggleBubbleTranslateButton.getAlpha();
+            boolean prevTranslateWordFlag = translateWordFlag;
+            boolean prevTranslateBubbleFlag = translateBubbleFlag;
             try {
                 Handler threadHandler = new Handler(Looper.getMainLooper());
-                threadHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
-                        mFindBubblesButton.setEnabled(false);
-                        mFindBubblesButton.setAlpha(.35f);
-                        mFindBubblesButton.setClickable(false);
-                    }
+                threadHandler.post(() -> {
+                    //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
+                    translateWordFlag = false;
+                    translateBubbleFlag = false;
+                    mFindBubblesButton.setEnabled(false);
+                    mFindBubblesButton.setAlpha(.35f);
+                    mFindBubblesButton.setClickable(false);
+                    mTranslateWordButton.setEnabled(false);
+                    mTranslateWordButton.setAlpha(.35f);
+                    mTranslateWordButton.setClickable(false);
+                    mToggleBubbleTranslateButton.setEnabled(false);
+                    mToggleBubbleTranslateButton.setAlpha(.35f);
+                    mToggleBubbleTranslateButton.setClickable(false);
                 });
 
-                pdfPageAsBitmap = pdfPageToBitmap(file, pageIdx);
-                Log.d("THREAD_TEST", "endpdfPageAsBitmapThread" + pdfPageAsBitmap);
+                //to jest to co skanuje strone cala
+                Page page2 = new Page(pdfPageToBitmap(file, pageIdx));
 
-                Log.d("THREAD_TEST", "startGenerateSpeechBubblesThread");
-                Page page2 = new Page(pdfPageAsBitmap);
-                List<Rectangle> speechBubbles;
-                List<Rectangle> rejectedBubbles;
-                List<List<Rectangle>> allBubbles;
-                allBubbles = page2.generate_speech_bubbles(0.5, 0.5 /*0.36*/,
-                        bubblesDetector, 0.2,
-                        true, bubblesClassifier);
-                speechBubbles = allBubbles.get(0);
-                rejectedBubbles = allBubbles.get(1);
-                page2.setSpeech_bubbles(speechBubbles);
-                page2.setRejected_speech_bubbles(rejectedBubbles);
-                Log.d("THREAD_TEST", "endGenerateSpeechBubblesThread" + speechBubbles.toArray().length + speechBubbles);
-
-
-                Log.d("THREAD_TEST", "startChangingXYToReal");
                 float onePageWidth = pdfView.getPageSize(pageIdx).getWidth();
                 float pageDetectorWidth = page2.getOrig_image().cols();
                 float proportionMapping = pageDetectorWidth / onePageWidth;
 
                 List<Rectangle> speechBubblesRealXY = new ArrayList<>();
                 List<Rectangle> speechBubblesWordsRealXY = new ArrayList<>();
+
+                if (!translatedPagesDetector.containsKey(pageIdx)) {
+                    page2 = scanPage(file, pageIdx, bubblesDetector, bubblesClassifier);
+                    List<Rectangle> tmp = new ArrayList<>();
+                    tmp.addAll(page2.getSpeech_bubbles());
+                    tmp.addAll(page2.getRejected_speech_bubbles());
+
+                    Log.d("THREAD_TEST", "startChangingXYToReal");
+                    speechBubblesRealXY = mapToRealXY(tmp, proportionMapping);
+                    //to jest tak, bo musi byc w threadzie
+                    List<Rectangle> finalSpeechBubblesRealXY = speechBubblesRealXY;
+                    threadHandler.post(() -> {
+                        translatedPagesDetector.put(pageIdx, tmp);
+                        translatedPages.put(pageIdx, finalSpeechBubblesRealXY);
+                    });
+                    //^
+
+
+                }
+                //^
+
                 String pathTesseract = getPathTess("eng.traineddata", getContext());
                 TessBaseAPI tess = new TessBaseAPI();
 
@@ -426,138 +788,131 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     tess.recycle();
                 }
 
-                //translate accepted bubbles on page and add to speechBubblesRealXY
-                for (Rectangle bubble : speechBubbles) {
-                    String tlum = translateBubble(bubble, page2, tess);
-                    Bitmap bitmap = getTappedRectangleAsBitmap(bubble, page2);
-                    // bitmap = getResizedBitmap(bitmap, (int) 1.2* bitmap.getWidth(), (int) 1.2* bitmap.getHeight());
 
-//                    Mat source = new Mat();
-//                    Utils.bitmapToMat(bitmap, source);
-//                    Mat destination = new Mat(source.rows(),source.cols(),source.type());
-//                    int erosion_size = 0;
-//                    Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(2*erosion_size + 1, 2*erosion_size+1));
-//                    Imgproc.erode(source, destination, element);
-//                    Utils.matToBitmap(destination, bitmap);
-//
-//                    int dilation_size = 0;
-//                    destination = source;
-//                    Mat element1 = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new  Size(2*dilation_size + 1, 2*dilation_size+1));
-//                    Imgproc.dilate(source, destination, element1);
-
-
-                    Paint paint = new Paint();
-                    Canvas canvas = new Canvas(bitmap);
-                    ColorMatrix cm = new ColorMatrix();
-                    float a = 77f;
-                    float b = 151f;
-                    float c = 28f;
-                    float t = 120 * -256f;
-                    cm.set(new float[] { a, b, c, 0, t, a, b, c, 0, t, a, b, c, 0, t, 0, 0, 0, 1, 0 });
-                    paint.setColorFilter(new ColorMatrixColorFilter(cm));
-                    canvas.drawBitmap(bitmap, 0, 0, paint);
-                    Bitmap bitmap2 = getTappedRectangleAsBitmap(bubble, page2);
-
-
-
-                    tess.setImage(bitmap);
-                    String text_1 = tess.getUTF8Text();
-                    String box_1 = tess.getBoxText(0);
-
-                    int c1 = tess.meanConfidence();
-
-                    tess.setImage(bitmap2);
-                    String text_2 = tess.getUTF8Text();
-                    String box_2 = tess.getBoxText(0);
-                    int c2 = tess.meanConfidence();
-                    Log.d("confidence", c1 + " " + c2);
-
-                    String text = "";
-                    String box = "";
-                    if (c2 > c1) {
-                        text = text_2;
-                        box = box_2;
-                    } else {
-                        text = text_1;
-                        box = box_1;
-                    }
-
-
-                    text = WordCheck.removeSingleChars(text);
-
-                    text = text.trim().replaceAll(" +", " ");
-                    if (text.isEmpty() | text == " ") {continue;}
-                    text.toUpperCase();
-                    Log.d("ocr", text + " " + text.length());
-
-                    List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
-
-                    for (Rectangle bubbleWord : bubbleWords) {
-                        Rectangle rectangle_new = new Rectangle(
-                                (int) ((bubble.getStartX() + bubbleWord.getStartX()) / proportionMapping),
-                                (int) ((bubble.getEndY() - bubbleWord.getEndY()) / proportionMapping),
-                                (int) ((bubble.getStartX() + bubbleWord.getEndX()) / proportionMapping),
-                                (int) ((bubble.getEndY() - bubbleWord.getStartY()) / proportionMapping));
-                        rectangle_new.setText(bubbleWord.getText());
-                        speechBubblesWordsRealXY.add(rectangle_new);
-                    }
-
-                    Translator translator = new Translator();
-                    WordCheck w2 = new WordCheck();
-                    try {
-                        CountDownLatch countDownLatch = new CountDownLatch(1);
-                        translator.run(text, w2, countDownLatch);
-                        countDownLatch.await();
-                        tlum = w2.getTest();
-                        Log.d("tlum", tlum + " " + tlum.length());
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    if (Objects.equals(tlum, "")) {continue;}
+                List<Rectangle> translatedPagesCopy = new ArrayList<>();
+                for (Rectangle bubble : translatedPages.get(pageIdx)) {
                     Rectangle rectangle_new = new Rectangle(
-                            (int) (bubble.getStartX() / proportionMapping),
-                            (int) (bubble.getStartY() / proportionMapping),
-                            (int) (bubble.getEndX() / proportionMapping),
-                            (int) (bubble.getEndY() / proportionMapping));
-                    rectangle_new.setText(tlum);
+                            (bubble.getStartX()),
+                            (bubble.getStartY()),
+                            (bubble.getEndX()),
+                            (bubble.getEndY()));
+                    rectangle_new.setAccepted(bubble.isAccepted());
+                    rectangle_new.setVisible(bubble.isVisible());
                     rectangle_new.setBackground_color(bubble.getBackground_color());
-                    rectangle_new.setVisible(true);
-                    rectangle_new.setAccepted(true);
 
-                    speechBubblesRealXY.add(rectangle_new);
+                    translatedPagesCopy.add(rectangle_new);
                 }
 
-                //dont translate rejected, only add to speechBubblesRealXY
-                for (Rectangle bubble : rejectedBubbles) {
+                for (int i = 0; i < translatedPagesDetector.get(pageIdx).size(); i++) {
+                    Rectangle bubble = translatedPagesDetector.get(pageIdx).get(i);
+                    if (bubble.isAccepted()) {
+                        //translate accepted bubbles on page and add to speechBubblesRealXY
+                        //String tlum = translateBubble(bubble, page2, tess);
+                        String tlum = "";
 
-                    Rectangle rectangle_new = new Rectangle(
-                            (int) (bubble.getStartX() / proportionMapping),
-                            (int) (bubble.getStartY() / proportionMapping),
-                            (int) (bubble.getEndX() / proportionMapping),
-                            (int) (bubble.getEndY() / proportionMapping));
-                    rectangle_new.setBackground_color(bubble.getBackground_color());
-                    rectangle_new.setVisible(false);
-                    rectangle_new.setAccepted(false);
+                        Bitmap bitmap = getTappedRectangleAsBitmap(bubble, page2);
+                        Paint paint = new Paint();
+                        Canvas canvas = new Canvas(bitmap);
+                        ColorMatrix cm = new ColorMatrix();
+                        float a = 77f;
+                        float b = 151f;
+                        float c = 28f;
+                        float t = 120 * -256f;
+                        cm.set(new float[]{a, b, c, 0, t, a, b, c, 0, t, a, b, c, 0, t, 0, 0, 0, 1, 0});
+                        paint.setColorFilter(new ColorMatrixColorFilter(cm));
+                        canvas.drawBitmap(bitmap, 0, 0, paint);
 
-                    speechBubblesRealXY.add(rectangle_new);
+                        Bitmap bitmap2 = getTappedRectangleAsBitmap(bubble, page2);
+
+
+                        tess.setImage(bitmap);
+                        String text_1 = tess.getUTF8Text();
+                        String box_1 = tess.getBoxText(0);
+                        int c1 = tess.meanConfidence();
+
+                        tess.setImage(bitmap2);
+                        String text_2 = tess.getUTF8Text();
+                        String box_2 = tess.getBoxText(0);
+                        int c2 = tess.meanConfidence();
+
+                        //TODO: sprawdzic ktory lepszy i wybrac jeden jezeli jest przewaga znaczna
+                        Log.d("confidence", c1 + " " + c2);
+
+                        String text = "";
+                        String box = "";
+                        if (c2 > c1) {
+                            text = text_2;
+                            box = box_2;
+                        } else {
+                            text = text_1;
+                            box = box_1;
+                        }
+
+                        text = WordCheck.removeSingleChars(text);
+
+                        text = text.trim().replaceAll(" +", " ");
+                        if (text.isEmpty() | text.equals(" ")) {
+                            continue;
+                        }
+                        text.toUpperCase();
+                        Log.d("ocr", text + " " + text.length());
+                        List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
+
+                        for (Rectangle bubbleWord : bubbleWords) {
+                            Rectangle rectangle_new = new Rectangle(
+                                    (int) ((bubble.getStartX() + bubbleWord.getStartX()) / proportionMapping),
+                                    (int) ((bubble.getEndY() - bubbleWord.getEndY()) / proportionMapping),
+                                    (int) ((bubble.getStartX() + bubbleWord.getEndX()) / proportionMapping),
+                                    (int) ((bubble.getEndY() - bubbleWord.getStartY()) / proportionMapping));
+                            rectangle_new.setText(bubbleWord.getText());
+                            speechBubblesWordsRealXY.add(rectangle_new);
+                        }
+
+
+                        try {
+                            String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+                            Translator translator = new Translator(authKey);
+                            TextResult result =
+                                    translator.translateText(text, null, "pl");
+                            tlum = result.getText().replace("Š", "Ą");
+                            Log.d("tlum", text + " | " + tlum);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        //TODO: nie wiem czy ta prawa strona ora jest git
+                        if (Objects.equals(tlum, "") | tlum.equals(text)) {
+                            continue;
+                        }
+                        translatedPagesCopy.get(i).setText(tlum);
+                        translatedPagesCopy.get(i).setVisible(true);
+                    }
+                    else {
+                        translatedPagesCopy.get(i).setVisible(false);
+                    }
                 }
 
-                threadHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Log.d("THREAD_TEST", "startUIThread");
-                        //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
-                        mFindBubblesButton.setEnabled(true);
-                        mFindBubblesButton.setAlpha(.75f);
-                        mFindBubblesButton.setClickable(true);
-                        page.setOrig_image(page2.getOrig_image());
-                        page.setSpeech_bubbles(speechBubbles);
-                        page.setRejected_speech_bubbles(rejectedBubbles);
-                        translatedPages.put(pageIdx, speechBubblesRealXY);
-                        translatedPagesWords.put(pageIdx, speechBubblesWordsRealXY);
-                        pdfView.invalidate();
-                        Log.d("THREAD_TEST", "endUIThread");
-                    }
+                Page finalPage = page2;
+                threadHandler.post(() -> {
+                    Log.d("THREAD_TEST", "startUIThread");
+                    //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
+                    mFindBubblesButton.setEnabled(true);
+                    mFindBubblesButton.setAlpha(.75f);
+                    mFindBubblesButton.setClickable(true);
+                    mTranslateWordButton.setEnabled(true);
+                    mTranslateWordButton.setAlpha(translateWordButtonAlpha);
+                    mTranslateWordButton.setClickable(true);
+                    mToggleBubbleTranslateButton.setEnabled(true);
+                    mToggleBubbleTranslateButton.setAlpha(toggleBubbleTranslateButtonAlpha);
+                    mToggleBubbleTranslateButton.setClickable(true);
+                    page.setOrig_image(finalPage.getOrig_image());
+                    page.setSpeech_bubbles(finalPage.getSpeech_bubbles());
+                    page.setRejected_speech_bubbles(finalPage.getRejected_speech_bubbles());
+                    translatedPages.put(pageIdx, translatedPagesCopy);
+                    translatedPagesWords.put(pageIdx, speechBubblesWordsRealXY);
+                    translateWordFlag = prevTranslateWordFlag;
+                    translateBubbleFlag = prevTranslateBubbleFlag;
+                    pdfView.invalidate();
+                    Log.d("THREAD_TEST", "endUIThread");
                 });
             } catch (Exception e) {
                 e.printStackTrace();
@@ -612,7 +967,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
     private static String getPathTess(String file, Context context) {
         AssetManager assetManager = context.getAssets();
-        BufferedInputStream inputStream = null;
+        BufferedInputStream inputStream;
         try {
             // Read data from assets.
             inputStream = new BufferedInputStream(assetManager.open(file));
@@ -651,30 +1006,32 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                 textPaint.setColor(Color.BLACK);
                 Log.d("page", String.valueOf(page.getOrig_image()));
                 for (Rectangle bubble : translatedPages.get(pdfView.getCurrentPage())) {
-                    if (bubble.isVisible()) {
-                        Log.d("Bubble", String.valueOf(bubble));
-                        int startX = (int) (bubble.getStartX() * pdfView.getZoom());
-                        int startY = (int) (bubble.getStartY() * pdfView.getZoom());
-                        int endX = (int) (bubble.getEndX() * pdfView.getZoom());
-                        int endY = (int) (bubble.getEndY() * pdfView.getZoom());
-                        Log.d("background_color", String.valueOf(bubble.getBackground_color()));
-                        paintBG.setColor(Color.rgb(bubble.getBackground_color().get(0),
-                                bubble.getBackground_color().get(1),
-                                bubble.getBackground_color().get(2)));
-                        canvas.drawRect(startX, startY, endX, endY, paintBG);
-                        RectF rect = new RectF(startX, startY, endX, endY);
-                        Rectangle rectangle = new Rectangle(startX, startY, endX, endY);
-                        rectangle.setText(bubble.getText());
-                        float fontSize = rectangle.getOptTextSize();
-                        textPaint.setTextSize(fontSize);
-                        StaticLayout sl = new StaticLayout(rectangle.getText(), textPaint,
-                                rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
-                                1, 1, false);
-                        canvas.save();
-                        canvas.translate(rect.left, rect.top);
-                        sl.draw(canvas);
-                        canvas.restore();
+                    if (Objects.isNull(bubble) || !bubble.isVisible() ||
+                            Objects.isNull(bubble.getText()) || bubble.getText().equals("")) {
+                        continue;
                     }
+                    Log.d("Bubble", String.valueOf(bubble));
+                    int startX = (int) (bubble.getStartX() * pdfView.getZoom());
+                    int startY = (int) (bubble.getStartY() * pdfView.getZoom());
+                    int endX = (int) (bubble.getEndX() * pdfView.getZoom());
+                    int endY = (int) (bubble.getEndY() * pdfView.getZoom());
+                    Log.d("background_color", String.valueOf(bubble.getBackground_color()));
+                    paintBG.setColor(Color.rgb(bubble.getBackground_color().get(0),
+                            bubble.getBackground_color().get(1),
+                            bubble.getBackground_color().get(2)));
+                    canvas.drawRect(startX, startY, endX, endY, paintBG);
+                    RectF rect = new RectF(startX, startY, endX, endY);
+                    Rectangle rectangle = new Rectangle(startX, startY, endX, endY);
+                    rectangle.setText(bubble.getText());
+                    float fontSize = rectangle.getOptTextSize();
+                    textPaint.setTextSize(fontSize);
+                    StaticLayout sl = new StaticLayout(rectangle.getText(), textPaint,
+                            rectangle.getWidth(), Layout.Alignment.ALIGN_CENTER,
+                            1, 1, false);
+                    canvas.save();
+                    canvas.translate(rect.left, rect.top);
+                    sl.draw(canvas);
+                    canvas.restore();
                 }
             }
         }
@@ -703,15 +1060,12 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
                 Handler threadHandler = new Handler(Looper.getMainLooper());
 
-                threadHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Log.d("THREAD_TEST", "startUIThread");
-                        //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
-                        page.setOrig_image(page2.getOrig_image());
-                        pdfPageAsBitmap = pdfPageAsBitmap2;
-                        Log.d("THREAD_TEST", "endUIThread");
-                    }
+                threadHandler.post(() -> {
+                    Log.d("THREAD_TEST", "startUIThread");
+                    //Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
+                    page.setOrig_image(page2.getOrig_image());
+                    pdfPageAsBitmap = pdfPageAsBitmap2;
+                    Log.d("THREAD_TEST", "endUIThread");
                 });
             } catch (Exception e) {
                 e.printStackTrace();
@@ -785,6 +1139,24 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
             //thisPageX, <mappedY> = piksel AKTUALNEJ STRONY, jezeli jest przyblizona, to wtedy przyblizonej
             //thisPageXRealScale, thisPageYRealScale = piksel AKTUALNEJ STRONY, jezeli jest przyblizona, to i tak zwraca normalne wymiary
 
+            boolean prevTranslateBubbleFlag = translateBubbleFlag;
+            boolean prevTranslateWordFlag = translateWordFlag;
+
+
+            if (prevTranslateBubbleFlag | prevTranslateWordFlag) {
+                mFindBubblesButton.setEnabled(false);
+                mFindBubblesButton.setAlpha(.35f);
+                mFindBubblesButton.setClickable(false);
+                mTranslateWordButton.setEnabled(false);
+                mTranslateWordButton.setAlpha(.35f);
+                mTranslateWordButton.setClickable(false);
+                mToggleBubbleTranslateButton.setEnabled(false);
+                mToggleBubbleTranslateButton.setAlpha(.35f);
+                mToggleBubbleTranslateButton.setClickable(false);
+                translateBubbleFlag = false;
+                translateWordFlag = false;
+            }
+
             if (cumXOffset.isEmpty()) {
                 this.updateCumXOffset();
             }
@@ -806,15 +1178,15 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
             //W     xH
             //1241.0x1674.0
-            float onePageWidth = pdfView.getPageSize(0).getWidth();
+            /*float onePageWidth = pdfView.getPageSize(0).getWidth();
             //mozliwe ze height jest niepotrzebne bo i tak mappedY nie jest zalezne od strony
             float onePageHeight = pdfView.getPageSize(0).getHeight();
             Log.d("ONTAPTEST", "getPageSize = " + pdfView.getPageSize(0));
-            Log.d("ONTAPTEST", "onePageWidth = " + onePageWidth + " | onePageHeight = " + onePageHeight);
+            Log.d("ONTAPTEST", "onePageWidth = " + onePageWidth + " | onePageHeight = " + onePageHeight);*/
 
 
-            float thisPageX = 0f;
-            float thisPageXRealScale = 0f;
+            float thisPageX;
+            float thisPageXRealScale;
             if (pageIdx != 0) {
                 thisPageX = mappedX - cumXOffset.get(pageIdx-1) * pdfView.getZoom();
             } else {
@@ -826,176 +1198,185 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
             Log.d("ONTAPTEST", "thisPageX = " + thisPageX + " | mappedY = " + mappedY);
             Log.d("ONTAPTEST", "thisPageXRealScale = " + thisPageXRealScale + " | thisPageYRealScale = " + thisPageYRealScale);
 
-            if (translateBubbleFlag) {
+            if (prevTranslateBubbleFlag) {
                 try {
-                    Rectangle foundBubble = tappedRectangle(translatedPages.get(pageIdx), thisPageXRealScale, thisPageYRealScale);
-                    Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
+                    int DDpi = getResources().getDisplayMetrics().densityDpi;
+                    BubbleRunnable runnable = new BubbleRunnable(DDpi, file, pdfView.getCurrentPage(),
+                            page, bubblesDetector, bubblesClassifier, thisPageXRealScale, thisPageYRealScale);
+                    new Thread(runnable).start();
 
 
-                    //jezeli visible to invis, i na odwrot
-                    foundBubble.setVisible(!foundBubble.isVisible());
-
-                    //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
-                    if (Objects.isNull(foundBubble.getText())) {
-                        String pathTesseract = getPathTess("eng.traineddata", getContext());
-                        TessBaseAPI tess = new TessBaseAPI();
-
-                        if (!tess.init(pathTesseract, "eng")) {
-                            Log.d("TESTTESSERACT", "nie dziala");
-                            // Error initializing Tesseract (wrong data path or language)
-                            tess.recycle();
-                        }
-
-                        float pageDetectorHeight = page.getOrig_image().rows();
-                        float onePageHeight2 = pdfView.getPageSize(pageIdx).getHeight();
-                        float proportion = pageDetectorHeight / onePageHeight2;
-                        Rectangle tappedRect = new Rectangle((int) (foundBubble.getStartX() * proportion), (int) (foundBubble.getStartY() * proportion), (int) (foundBubble.getEndX() * proportion), (int) (foundBubble.getEndY() * proportion));
-                        String translatedText = translateBubble(tappedRect, page, tess);
-                        Log.d("translatedText", translatedText);
-                        foundBubble.setText(translatedText);
-                        Log.d("setText", foundBubble.getText());
-
-                        // i dorobic slowa
-                        //TODO: nie ma tutaj uzytych dwoch modeli wiec robie tylko na jednym, nie wiem jak powinno byc???
-
-                        /*String box_2 = tess.getBoxText(0);
-                        int c2 = tess.meanConfidence();
-                        Log.d("confidence", c1 + " " + c2);*/
-
-                        String text = "";
-                        String box = "";
-                        /*if (c2 > c1) {
-                            text = text_2;
-                            box = box_2;
-                        } else {
-                            text = text_1;
-                            box = box_1;
-                        }*/
-                        text = tess.getUTF8Text();
-                        box = tess.getBoxText(0);
-
-
-                        text = WordCheck.removeSingleChars(text);
-
-                        text = text.trim().replaceAll(" +", " ");
-                        if (!text.isEmpty() & !text.equals(" ")) {
-                            List<Rectangle> speechBubbleWords = new ArrayList<>();
-                            text.toUpperCase();
-                            Log.d("ocr", text + " " + text.length());
-
-                            List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
-
-                            for (Rectangle bubbleWord : bubbleWords) {
-                                Rectangle rectangle_new = new Rectangle(
-                                        (int) ((tappedRect.getStartX() + bubbleWord.getStartX()) / proportion),
-                                        (int) ((tappedRect.getEndY() - bubbleWord.getEndY()) / proportion),
-                                        (int) ((tappedRect.getStartX() + bubbleWord.getEndX()) / proportion),
-                                        (int) ((tappedRect.getEndY() - bubbleWord.getStartY()) / proportion));
-                                rectangle_new.setText(bubbleWord.getText());
-                                translatedPagesWords.get(pageIdx).add(rectangle_new);
-                            }
-                        }
-                        //^
-                    }
-
+//                    Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
+//
+//
+//                    //jezeli visible to invis, i na odwrot
+//                    foundBubble.setVisible(!foundBubble.isVisible());
+//
+//                    //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
+//                    if (Objects.isNull(foundBubble.getText())) {
+//                        String pathTesseract = getPathTess("eng.traineddata", getContext());
+//                        TessBaseAPI tess = new TessBaseAPI();
+//
+//                        if (!tess.init(pathTesseract, "eng")) {
+//                            Log.d("TESTTESSERACT", "nie dziala");
+//                            // Error initializing Tesseract (wrong data path or language)
+//                            tess.recycle();
+//                        }
+//
+//                        float pageDetectorHeight = page.getOrig_image().rows();
+//                        float onePageHeight2 = pdfView.getPageSize(pageIdx).getHeight();
+//                        float proportion = pageDetectorHeight / onePageHeight2;
+//                        Rectangle tappedRect = new Rectangle((int) (foundBubble.getStartX() * proportion), (int) (foundBubble.getStartY() * proportion), (int) (foundBubble.getEndX() * proportion), (int) (foundBubble.getEndY() * proportion));
+//                        String translatedText = translateBubble(tappedRect, page, tess);
+//                        Log.d("translatedText", translatedText);
+//                        foundBubble.setText(translatedText);
+//                        Log.d("setText", foundBubble.getText());
+//
+//                        // i dorobic slowa
+//                        //TODO: nie ma tutaj uzytych dwoch modeli wiec robie tylko na jednym, nie wiem jak powinno byc???
+//
+//                        /*String box_2 = tess.getBoxText(0);
+//                        int c2 = tess.meanConfidence();
+//                        Log.d("confidence", c1 + " " + c2);*/
+//
+//                        String text = "";
+//                        String box = "";
+//                        /*if (c2 > c1) {
+//                            text = text_2;
+//                            box = box_2;
+//                        } else {
+//                            text = text_1;
+//                            box = box_1;
+//                        }*/
+//                        text = tess.getUTF8Text();
+//                        box = tess.getBoxText(0);
+//
+//
+//                        text = WordCheck.removeSingleChars(text);
+//
+//                        text = text.trim().replaceAll(" +", " ");
+//                        if (!text.isEmpty() & !text.equals(" ")) {
+//                            List<Rectangle> speechBubbleWords = new ArrayList<>();
+//                            text.toUpperCase();
+//                            Log.d("ocr", text + " " + text.length());
+//
+//                            List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
+//
+//                            for (Rectangle bubbleWord : bubbleWords) {
+//                                Rectangle rectangle_new = new Rectangle(
+//                                        (int) ((tappedRect.getStartX() + bubbleWord.getStartX()) / proportion),
+//                                        (int) ((tappedRect.getEndY() - bubbleWord.getEndY()) / proportion),
+//                                        (int) ((tappedRect.getStartX() + bubbleWord.getEndX()) / proportion),
+//                                        (int) ((tappedRect.getEndY() - bubbleWord.getStartY()) / proportion));
+//                                rectangle_new.setText(bubbleWord.getText());
+//                                translatedPagesWords.get(pageIdx).add(rectangle_new);
+//                            }
+//                        }
+//                        //^
+//                    }
                 } catch (Exception exception) {
                     Log.d("TESTWYKRYCIA", String.valueOf(exception));
                 }
             }
 
             //jednego slowa
-            if (translateWordFlag) {
+            if (prevTranslateWordFlag) {
                 try {
-                    Rectangle foundBubble = tappedRectangle(translatedPages.get(pageIdx), thisPageXRealScale, thisPageYRealScale);
-                    Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
+                    int DDpi = getResources().getDisplayMetrics().densityDpi;
+                    WordRunnable runnable = new WordRunnable(DDpi, file, pdfView.getCurrentPage(),
+                            page, bubblesDetector, bubblesClassifier, thisPageXRealScale, thisPageYRealScale);
+                    new Thread(runnable).start();
 
-
-                    //jezeli visible to invis, i na odwrot
-                    //foundBubble.setVisible(!foundBubble.isVisible());
-
-                    //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
-                    if (Objects.isNull(foundBubble.getText())) {
-                        String pathTesseract = getPathTess("eng.traineddata", getContext());
-                        TessBaseAPI tess = new TessBaseAPI();
-
-                        if (!tess.init(pathTesseract, "eng")) {
-                            Log.d("TESTTESSERACT", "nie dziala");
-                            // Error initializing Tesseract (wrong data path or language)
-                            tess.recycle();
-                        }
-
-                        float pageDetectorHeight = page.getOrig_image().rows();
-                        float onePageHeight2 = pdfView.getPageSize(pageIdx).getHeight();
-                        float proportion = pageDetectorHeight / onePageHeight2;
-                        Rectangle tappedRect = new Rectangle((int) (foundBubble.getStartX() * proportion), (int) (foundBubble.getStartY() * proportion), (int) (foundBubble.getEndX() * proportion), (int) (foundBubble.getEndY() * proportion));
-                        String translatedText = translateBubble(tappedRect, page, tess);
-                        Log.d("translatedText", translatedText);
-                        foundBubble.setText(translatedText);
-                        Log.d("setText", foundBubble.getText());
-
-                        // i dorobic slowa
-                        //TODO: nie ma tutaj uzytych dwoch modeli wiec robie tylko na jednym, nie wiem jak powinno byc???
-
-                        /*String box_2 = tess.getBoxText(0);
-                        int c2 = tess.meanConfidence();
-                        Log.d("confidence", c1 + " " + c2);*/
-
-                        String text = "";
-                        String box = "";
-                        /*if (c2 > c1) {
-                            text = text_2;
-                            box = box_2;
-                        } else {
-                            text = text_1;
-                            box = box_1;
-                        }*/
-                        text = tess.getUTF8Text();
-                        box = tess.getBoxText(0);
-
-
-                        text = WordCheck.removeSingleChars(text);
-
-                        text = text.trim().replaceAll(" +", " ");
-                        if (!text.isEmpty() & !text.equals(" ")) {
-                            List<Rectangle> speechBubbleWords = new ArrayList<>();
-                            text.toUpperCase();
-                            Log.d("ocr", text + " " + text.length());
-
-                            List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
-
-                            for (Rectangle bubbleWord : bubbleWords) {
-                                Rectangle rectangle_new = new Rectangle(
-                                        (int) ((tappedRect.getStartX() + bubbleWord.getStartX()) / proportion),
-                                        (int) ((tappedRect.getEndY() - bubbleWord.getEndY()) / proportion),
-                                        (int) ((tappedRect.getStartX() + bubbleWord.getEndX()) / proportion),
-                                        (int) ((tappedRect.getEndY() - bubbleWord.getStartY()) / proportion));
-                                rectangle_new.setText(bubbleWord.getText());
-                                translatedPagesWords.get(pageIdx).add(rectangle_new);
-                            }
-                        }
-                        //^
-                    }
-
-                    //sprawdzenie czy sie tapnelo slowo:
-                    Rectangle foundBubbleWord = tappedRectangle(translatedPagesWords.get(pageIdx), thisPageXRealScale, thisPageYRealScale);
-                    if (!Objects.isNull(foundBubbleWord)) {
-                        //robi tlumaczenie tekstu
-                        Translator translator = new Translator();
-                        WordCheck w2 = new WordCheck();
-                        String text = foundBubbleWord.getText();
-                        String tlum = "";
-                        try {
-                            CountDownLatch countDownLatch = new CountDownLatch(1);
-                            translator.run(text, w2, countDownLatch);
-                            countDownLatch.await();
-                            tlum = w2.getTest();
-                            Log.d("tlum", tlum);
-                        } catch (Exception e2) {
-                            e2.printStackTrace();
-                        }
-                        //otworzyc dialog
-                        openDialogWord(foundBubbleWord.getText(), tlum);
-                    }
+//                    Rectangle foundBubble = tappedRectangle(translatedPages.get(pageIdx), thisPageXRealScale, thisPageYRealScale);
+//                    Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
+//
+//
+//                    //jezeli visible to invis, i na odwrot
+//                    //foundBubble.setVisible(!foundBubble.isVisible());
+//
+//                    //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
+//                    if (Objects.isNull(foundBubble.getText())) {
+//                        String pathTesseract = getPathTess("eng.traineddata", getContext());
+//                        TessBaseAPI tess = new TessBaseAPI();
+//
+//                        if (!tess.init(pathTesseract, "eng")) {
+//                            Log.d("TESTTESSERACT", "nie dziala");
+//                            // Error initializing Tesseract (wrong data path or language)
+//                            tess.recycle();
+//                        }
+//
+//                        float pageDetectorHeight = page.getOrig_image().rows();
+//                        float onePageHeight2 = pdfView.getPageSize(pageIdx).getHeight();
+//                        float proportion = pageDetectorHeight / onePageHeight2;
+//                        Rectangle tappedRect = new Rectangle((int) (foundBubble.getStartX() * proportion), (int) (foundBubble.getStartY() * proportion), (int) (foundBubble.getEndX() * proportion), (int) (foundBubble.getEndY() * proportion));
+//                        String translatedText = translateBubble(tappedRect, page, tess);
+//                        Log.d("translatedText", translatedText);
+//                        foundBubble.setText(translatedText);
+//                        Log.d("setText", foundBubble.getText());
+//
+//                        // i dorobic slowa
+//                        //TODO: nie ma tutaj uzytych dwoch modeli wiec robie tylko na jednym, nie wiem jak powinno byc???
+//
+//                        /*String box_2 = tess.getBoxText(0);
+//                        int c2 = tess.meanConfidence();
+//                        Log.d("confidence", c1 + " " + c2);*/
+//
+//                        String text = "";
+//                        String box = "";
+//                        /*if (c2 > c1) {
+//                            text = text_2;
+//                            box = box_2;
+//                        } else {
+//                            text = text_1;
+//                            box = box_1;
+//                        }*/
+//                        text = tess.getUTF8Text();
+//                        box = tess.getBoxText(0);
+//
+//
+//                        text = WordCheck.removeSingleChars(text);
+//
+//                        text = text.trim().replaceAll(" +", " ");
+//                        if (!text.isEmpty() & !text.equals(" ")) {
+//                            List<Rectangle> speechBubbleWords = new ArrayList<>();
+//                            text.toUpperCase();
+//                            Log.d("ocr", text + " " + text.length());
+//
+//                            List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
+//
+//                            for (Rectangle bubbleWord : bubbleWords) {
+//                                Rectangle rectangle_new = new Rectangle(
+//                                        (int) ((tappedRect.getStartX() + bubbleWord.getStartX()) / proportion),
+//                                        (int) ((tappedRect.getEndY() - bubbleWord.getEndY()) / proportion),
+//                                        (int) ((tappedRect.getStartX() + bubbleWord.getEndX()) / proportion),
+//                                        (int) ((tappedRect.getEndY() - bubbleWord.getStartY()) / proportion));
+//                                rectangle_new.setText(bubbleWord.getText());
+//                                translatedPagesWords.get(pageIdx).add(rectangle_new);
+//                            }
+//                        }
+//                        //^
+//                    }
+//
+//                    //sprawdzenie czy sie tapnelo slowo:
+//                    Rectangle foundBubbleWord = tappedRectangle(translatedPagesWords.get(pageIdx), thisPageXRealScale, thisPageYRealScale);
+//                    if (!Objects.isNull(foundBubbleWord)) {
+//                        //robi tlumaczenie tekstu
+//                        Translator translator = new Translator();
+//                        WordCheck w2 = new WordCheck();
+//                        String text = foundBubbleWord.getText();
+//                        String tlum = "";
+//                        try {
+//                            CountDownLatch countDownLatch = new CountDownLatch(1);
+//                            translator.run(text, w2, countDownLatch);
+//                            countDownLatch.await();
+//                            tlum = w2.getTest();
+//                            Log.d("tlum", tlum);
+//                        } catch (Exception e2) {
+//                            e2.printStackTrace();
+//                        }
+//                        //otworzyc dialog
+//                        openDialogWord(foundBubbleWord.getText(), tlum);
+//                    }
 
                 } catch (Exception exception) {
                     Log.d("TESTWYKRYCIA", String.valueOf(exception));
@@ -1027,20 +1408,68 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
         tess.setImage(bitmap);
         String text = tess.getUTF8Text();
-        String text2 = WordCheck.removeSingleChars(text);
+        text = WordCheck.removeSingleChars(text);
 
-        Translator translator = new Translator();
-        WordCheck w2 = new WordCheck();
+
         String tlum = "";
         try {
-            CountDownLatch countDownLatch = new CountDownLatch(1);
-            translator.run(text2, w2, countDownLatch);
-            countDownLatch.await();
-            tlum = w2.getTest();
-            Log.d("tlum", tlum);
+            String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+            Translator translator = new Translator(authKey);
+            TextResult result =
+                    translator.translateText(text, null, "pl");
+            tlum = result.getText().replace("Š", "Ą");
+            Log.d("tlum", text + " | " + tlum);
         } catch (Exception e) {
             e.printStackTrace();
         }
         return tlum;
+    }
+
+    private Page scanPage(File file, int pageIdx, BubblesDetector bubblesDetector, BubblesClassifier bubblesClassifier) {
+        //translatedPagesDetector
+
+        pdfPageAsBitmap = pdfPageToBitmap(file, pageIdx);
+        Log.d("THREAD_TEST", "endpdfPageAsBitmapThread" + pdfPageAsBitmap);
+
+        Log.d("THREAD_TEST", "startGenerateSpeechBubblesThread");
+        Page page2 = new Page(pdfPageAsBitmap);
+        List<Rectangle> speechBubbles;
+        List<Rectangle> rejectedBubbles;
+        List<List<Rectangle>> allBubbles;
+        allBubbles = page2.generate_speech_bubbles(0.5, 0.5 /*0.36*/,
+                bubblesDetector, 0.2,
+                true, bubblesClassifier);
+        speechBubbles = allBubbles.get(0);
+        rejectedBubbles = allBubbles.get(1);
+        for (Rectangle bubble : speechBubbles) {
+            bubble.setAccepted(true);
+        }
+        for (Rectangle bubble : rejectedBubbles) {
+            bubble.setAccepted(false);
+        }
+        page2.setSpeech_bubbles(speechBubbles);
+        page2.setRejected_speech_bubbles(rejectedBubbles);
+        Log.d("THREAD_TEST", "endGenerateSpeechBubblesThread" + speechBubbles.toArray().length + speechBubbles);
+
+        return page2;
+    }
+
+    private List<Rectangle> mapToRealXY(List<Rectangle> input, float proportionMapping) {
+        List<Rectangle> result = new ArrayList<>();
+
+        for (Rectangle bubble : input) {
+            Rectangle rectangle_new = new Rectangle(
+                    (int) (bubble.getStartX() / proportionMapping),
+                    (int) (bubble.getStartY() / proportionMapping),
+                    (int) (bubble.getEndX() / proportionMapping),
+                    (int) (bubble.getEndY() / proportionMapping));
+            rectangle_new.setAccepted(bubble.isAccepted());
+            rectangle_new.setVisible(bubble.isVisible());
+            rectangle_new.setBackground_color(bubble.getBackground_color());
+
+            result.add(rectangle_new);
+        }
+
+        return result;
     }
 }
