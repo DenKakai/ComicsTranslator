@@ -92,8 +92,6 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
         pdfView.setMidZoom(2f);
 
-        //TODO: zoomout ma nie przecuac ekranu do dolnego lewego rogu, a zoomin ma nie przerzucac do gornego lewego rogu
-        //TODO: naprawic, ze niezawsze dobrze sie wyszarza
 
         //przyblizenie
         mZoomInButton = findViewById(R.id.zoomIn);
@@ -380,24 +378,11 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     Log.d("translatedText", translatedText);
 
                     // i dorobic slowa
-                    //TODO: nie ma tutaj uzytych dwoch modeli wiec robie tylko na jednym, nie wiem jak powinno byc???
-
-                        /*String box_2 = tess.getBoxText(0);
-                        int c2 = tess.meanConfidence();
-                        Log.d("confidence", c1 + " " + c2);*/
-
                     String text = "";
                     String box = "";
-                        /*if (c2 > c1) {
-                            text = text_2;
-                            box = box_2;
-                        } else {
-                            text = text_1;
-                            box = box_1;
-                        }*/
+
                     text = tess.getUTF8Text();
                     box = tess.getBoxText(0);
-
 
                     text = WordCheck.removeSingleChars(text);
 
@@ -559,21 +544,10 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     Log.d("translatedText", translatedText);
 
                     // i dorobic slowa
-                    //TODO: nie ma tutaj uzytych dwoch modeli wiec robie tylko na jednym, nie wiem jak powinno byc???
-
-                        /*String box_2 = tess.getBoxText(0);
-                        int c2 = tess.meanConfidence();
-                        Log.d("confidence", c1 + " " + c2);*/
 
                     String text = "";
                     String box = "";
-                        /*if (c2 > c1) {
-                            text = text_2;
-                            box = box_2;
-                        } else {
-                            text = text_1;
-                            box = box_1;
-                        }*/
+
                     text = tess.getUTF8Text();
                     box = tess.getBoxText(0);
 
@@ -840,7 +814,6 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                         String box_2 = tess.getBoxText(0);
                         int c2 = tess.meanConfidence();
 
-                        //TODO: sprawdzic ktory lepszy i wybrac jeden jezeli jest przewaga znaczna
                         Log.d("confidence", c1 + " " + c2);
 
                         String text = "";
@@ -1084,7 +1057,6 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         public void onPageChanged(int pageIdx, int pageCount) {
 
 
-            //TODO: te dwie do threada. pamietac, ze to musi byc thread w threadzie xd
             if (pageIdx != 0) {
                 GetPageAsBitmapRunnable runnable = new GetPageAsBitmapRunnable(file, pageIdx, page);
                 new Thread(runnable).start();
@@ -1209,76 +1181,6 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     BubbleRunnable runnable = new BubbleRunnable(DDpi, file, pdfView.getCurrentPage(),
                             page, bubblesDetector, bubblesClassifier, thisPageXRealScale, thisPageYRealScale);
                     new Thread(runnable).start();
-
-
-//                    Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
-//
-//
-//                    //jezeli visible to invis, i na odwrot
-//                    foundBubble.setVisible(!foundBubble.isVisible());
-//
-//                    //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
-//                    if (Objects.isNull(foundBubble.getText())) {
-//                        String pathTesseract = getPathTess("eng.traineddata", getContext());
-//                        TessBaseAPI tess = new TessBaseAPI();
-//
-//                        if (!tess.init(pathTesseract, "eng")) {
-//                            Log.d("TESTTESSERACT", "nie dziala");
-//                            // Error initializing Tesseract (wrong data path or language)
-//                            tess.recycle();
-//                        }
-//
-//                        float pageDetectorHeight = page.getOrig_image().rows();
-//                        float onePageHeight2 = pdfView.getPageSize(pageIdx).getHeight();
-//                        float proportion = pageDetectorHeight / onePageHeight2;
-//                        Rectangle tappedRect = new Rectangle((int) (foundBubble.getStartX() * proportion), (int) (foundBubble.getStartY() * proportion), (int) (foundBubble.getEndX() * proportion), (int) (foundBubble.getEndY() * proportion));
-//                        String translatedText = translateBubble(tappedRect, page, tess);
-//                        Log.d("translatedText", translatedText);
-//                        foundBubble.setText(translatedText);
-//                        Log.d("setText", foundBubble.getText());
-//
-//                        // i dorobic slowa
-//                        //TODO: nie ma tutaj uzytych dwoch modeli wiec robie tylko na jednym, nie wiem jak powinno byc???
-//
-//                        /*String box_2 = tess.getBoxText(0);
-//                        int c2 = tess.meanConfidence();
-//                        Log.d("confidence", c1 + " " + c2);*/
-//
-//                        String text = "";
-//                        String box = "";
-//                        /*if (c2 > c1) {
-//                            text = text_2;
-//                            box = box_2;
-//                        } else {
-//                            text = text_1;
-//                            box = box_1;
-//                        }*/
-//                        text = tess.getUTF8Text();
-//                        box = tess.getBoxText(0);
-//
-//
-//                        text = WordCheck.removeSingleChars(text);
-//
-//                        text = text.trim().replaceAll(" +", " ");
-//                        if (!text.isEmpty() & !text.equals(" ")) {
-//                            List<Rectangle> speechBubbleWords = new ArrayList<>();
-//                            text.toUpperCase();
-//                            Log.d("ocr", text + " " + text.length());
-//
-//                            List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
-//
-//                            for (Rectangle bubbleWord : bubbleWords) {
-//                                Rectangle rectangle_new = new Rectangle(
-//                                        (int) ((tappedRect.getStartX() + bubbleWord.getStartX()) / proportion),
-//                                        (int) ((tappedRect.getEndY() - bubbleWord.getEndY()) / proportion),
-//                                        (int) ((tappedRect.getStartX() + bubbleWord.getEndX()) / proportion),
-//                                        (int) ((tappedRect.getEndY() - bubbleWord.getStartY()) / proportion));
-//                                rectangle_new.setText(bubbleWord.getText());
-//                                translatedPagesWords.get(pageIdx).add(rectangle_new);
-//                            }
-//                        }
-//                        //^
-//                    }
                 } catch (Exception exception) {
                     Log.d("TESTWYKRYCIA", String.valueOf(exception));
                 }
@@ -1291,98 +1193,6 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     WordRunnable runnable = new WordRunnable(DDpi, file, pdfView.getCurrentPage(),
                             page, bubblesDetector, bubblesClassifier, thisPageXRealScale, thisPageYRealScale);
                     new Thread(runnable).start();
-
-//                    Rectangle foundBubble = tappedRectangle(translatedPages.get(pageIdx), thisPageXRealScale, thisPageYRealScale);
-//                    Log.d("TESTWYKRYCIA", String.valueOf(foundBubble));
-//
-//
-//                    //jezeli visible to invis, i na odwrot
-//                    //foundBubble.setVisible(!foundBubble.isVisible());
-//
-//                    //jezeli nie ma tekstu, to trzeba przetlumaczyc i ustawic
-//                    if (Objects.isNull(foundBubble.getText())) {
-//                        String pathTesseract = getPathTess("eng.traineddata", getContext());
-//                        TessBaseAPI tess = new TessBaseAPI();
-//
-//                        if (!tess.init(pathTesseract, "eng")) {
-//                            Log.d("TESTTESSERACT", "nie dziala");
-//                            // Error initializing Tesseract (wrong data path or language)
-//                            tess.recycle();
-//                        }
-//
-//                        float pageDetectorHeight = page.getOrig_image().rows();
-//                        float onePageHeight2 = pdfView.getPageSize(pageIdx).getHeight();
-//                        float proportion = pageDetectorHeight / onePageHeight2;
-//                        Rectangle tappedRect = new Rectangle((int) (foundBubble.getStartX() * proportion), (int) (foundBubble.getStartY() * proportion), (int) (foundBubble.getEndX() * proportion), (int) (foundBubble.getEndY() * proportion));
-//                        String translatedText = translateBubble(tappedRect, page, tess);
-//                        Log.d("translatedText", translatedText);
-//                        foundBubble.setText(translatedText);
-//                        Log.d("setText", foundBubble.getText());
-//
-//                        // i dorobic slowa
-//                        //TODO: nie ma tutaj uzytych dwoch modeli wiec robie tylko na jednym, nie wiem jak powinno byc???
-//
-//                        /*String box_2 = tess.getBoxText(0);
-//                        int c2 = tess.meanConfidence();
-//                        Log.d("confidence", c1 + " " + c2);*/
-//
-//                        String text = "";
-//                        String box = "";
-//                        /*if (c2 > c1) {
-//                            text = text_2;
-//                            box = box_2;
-//                        } else {
-//                            text = text_1;
-//                            box = box_1;
-//                        }*/
-//                        text = tess.getUTF8Text();
-//                        box = tess.getBoxText(0);
-//
-//
-//                        text = WordCheck.removeSingleChars(text);
-//
-//                        text = text.trim().replaceAll(" +", " ");
-//                        if (!text.isEmpty() & !text.equals(" ")) {
-//                            List<Rectangle> speechBubbleWords = new ArrayList<>();
-//                            text.toUpperCase();
-//                            Log.d("ocr", text + " " + text.length());
-//
-//                            List<Rectangle> bubbleWords = WordCheck.words_position(text, box);
-//
-//                            for (Rectangle bubbleWord : bubbleWords) {
-//                                Rectangle rectangle_new = new Rectangle(
-//                                        (int) ((tappedRect.getStartX() + bubbleWord.getStartX()) / proportion),
-//                                        (int) ((tappedRect.getEndY() - bubbleWord.getEndY()) / proportion),
-//                                        (int) ((tappedRect.getStartX() + bubbleWord.getEndX()) / proportion),
-//                                        (int) ((tappedRect.getEndY() - bubbleWord.getStartY()) / proportion));
-//                                rectangle_new.setText(bubbleWord.getText());
-//                                translatedPagesWords.get(pageIdx).add(rectangle_new);
-//                            }
-//                        }
-//                        //^
-//                    }
-//
-//                    //sprawdzenie czy sie tapnelo slowo:
-//                    Rectangle foundBubbleWord = tappedRectangle(translatedPagesWords.get(pageIdx), thisPageXRealScale, thisPageYRealScale);
-//                    if (!Objects.isNull(foundBubbleWord)) {
-//                        //robi tlumaczenie tekstu
-//                        Translator translator = new Translator();
-//                        WordCheck w2 = new WordCheck();
-//                        String text = foundBubbleWord.getText();
-//                        String tlum = "";
-//                        try {
-//                            CountDownLatch countDownLatch = new CountDownLatch(1);
-//                            translator.run(text, w2, countDownLatch);
-//                            countDownLatch.await();
-//                            tlum = w2.getTest();
-//                            Log.d("tlum", tlum);
-//                        } catch (Exception e2) {
-//                            e2.printStackTrace();
-//                        }
-//                        //otworzyc dialog
-//                        openDialogWord(foundBubbleWord.getText(), tlum);
-//                    }
-
                 } catch (Exception exception) {
                     Log.d("TESTWYKRYCIA", String.valueOf(exception));
                 }
