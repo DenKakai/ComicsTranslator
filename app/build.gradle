@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.pdfreader2'
+    namespace 'wut.mini.comicstranslator'
     compileSdk 32
 
     defaultConfig {
-        applicationId "com.example.pdfreader2"
+        applicationId "wut.mini.comicstranslator"
         minSdk 27
         targetSdk 32
         versionCode 1

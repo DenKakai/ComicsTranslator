@@ -1,2 +1,0 @@
-ninja: Entering directory `C:\Users\Tomcio\AndroidStudioProjects\PDFReader4\openCV455\.cxx\Debug\2u32y5i3\armeabi-v7a'
-ninja: no work to do.
