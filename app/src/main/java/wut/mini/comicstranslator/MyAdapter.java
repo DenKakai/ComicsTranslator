@@ -34,9 +34,11 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>{
 
     Context context;
     File[] filesAndFolders;
-    public MyAdapter(Context context, File[] filesAndFolders) {
+    String token;
+    public MyAdapter(Context context, File[] filesAndFolders, String token) {
         this.context = context;
         this.filesAndFolders = filesAndFolders;
+        this.token = token;
     }
 
     @Override
@@ -67,6 +69,7 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>{
                     Intent intent = new Intent(context, FileListActivity.class);
                     String path = selectedFile.getPath();
                     intent.putExtra("path", path);
+                    intent.putExtra("token", token);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     context.startActivity(intent);
                 }else {
@@ -76,6 +79,7 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>{
                             Intent intent = new Intent(context, PdfViewerActivity.class);
                             String path = selectedFile.getPath();
                             intent.putExtra("path", path);
+                            intent.putExtra("token", token);
                             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                             context.startActivity(intent);
                         }
@@ -127,6 +131,7 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>{
 
                                 Intent intent = new Intent(context, PdfViewerActivity.class);
                                 intent.putExtra("path", path + "/chosenComic.pdf");
+                                intent.putExtra("token", token);
                                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                                 context.startActivity(intent);
                             } catch (Exception e) {

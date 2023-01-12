@@ -21,6 +21,7 @@ import android.text.TextPaint;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.ImageButton;
+import android.widget.Toast;
 
 import com.deepl.api.TextResult;
 import com.deepl.api.Translator;
@@ -64,6 +65,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
     Bitmap pdfPageAsBitmap;
     boolean translateBubbleFlag = false;
     boolean translateWordFlag = false;
+    private String token;
 
     BubblesClassifier bubblesClassifier;
     BubblesDetector bubblesDetector;
@@ -247,6 +249,9 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         mJumpToPageButton = findViewById(R.id.jumpToPage);
         mJumpToPageButton.setAlpha(0.75f);
         mJumpToPageButton.setOnClickListener(view -> openDialog());
+
+        token = getIntent().getStringExtra("token");;
+        Log.d("test_token", token);
     }
 
     public void openDialog() {
@@ -660,7 +665,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     text = WordCheck.removeSingleChars(text).replace(" ", "");
                     String tlum = "";
                     try {
-                        String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+                        String authKey = token;
                         Log.d("text to translate", text);
                         Translator translator = new Translator(authKey);
                         if(!Character.isLetter(text.charAt(text.length()-1))) {
@@ -671,6 +676,9 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                         tlum = result.getText().replace("Š", "Ą").toUpperCase();
                         Log.d("tlum", text + " | " + tlum);
                     } catch (Exception e2) {
+                        threadHandler.post(() -> {
+                            Toast.makeText(getContext(),"Niepoprawny token DeepL!", Toast.LENGTH_SHORT).show();
+                        });
                         e2.printStackTrace();
                     }
                     //otworzyc dialog
@@ -849,13 +857,16 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
 
                         try {
-                            String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+                            String authKey = token;
                             Translator translator = new Translator(authKey);
                             TextResult result =
                                     translator.translateText(text.toLowerCase(), null, "pl");
                             tlum = result.getText().replace("Š", "Ą").toUpperCase();
                             Log.d("tlum", text + " | " + tlum);
                         } catch (Exception e) {
+                            threadHandler.post(() -> {
+                                Toast.makeText(getContext(),"Niepoprawny token DeepL!", Toast.LENGTH_SHORT).show();
+                            });
                             e.printStackTrace();
                         }
                         if (Objects.equals(tlum, "") | tlum.equals(text)) {
@@ -1228,13 +1239,17 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
         String tlum = "";
         try {
-            String authKey = "06bc20c9-0730-62bc-55c6-7d94d7c98be9:fx";
+            String authKey = token;
             Translator translator = new Translator(authKey);
             TextResult result =
                     translator.translateText(text.toLowerCase(), null, "pl");
             tlum = result.getText().replace("Š", "Ą").toUpperCase();
             Log.d("tlum", text + " | " + tlum);
         } catch (Exception e) {
+            Handler threadHandler = new Handler(Looper.getMainLooper());
+            threadHandler.post(() -> {
+                Toast.makeText(getContext(),"Niepoprawny token DeepL!", Toast.LENGTH_SHORT).show();
+            });
             e.printStackTrace();
         }
         return tlum;

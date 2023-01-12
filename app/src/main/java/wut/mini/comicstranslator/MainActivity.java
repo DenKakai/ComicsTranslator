@@ -5,22 +5,31 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
+import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Toast;
+
+import com.deepl.api.TextResult;
+import com.deepl.api.Translator;
 
 import org.opencv.android.OpenCVLoader;
 
 public class MainActivity extends AppCompatActivity {
 
     private Button mLoadPDF;
+    private Button mWriteToken;
+    private String token = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,6 +48,36 @@ public class MainActivity extends AppCompatActivity {
         //Loader.load(opencv_java.class)
         OpenCVLoader.initDebug();
 
+        //wpisz token
+        mWriteToken = (Button)findViewById(R.id.getToken);
+        mWriteToken.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle("Wpisz token DeepL");
+
+                final EditText input = new EditText(MainActivity.this);
+                input.setInputType(InputType.TYPE_CLASS_TEXT);
+                builder.setView(input);
+
+                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        token = input.getText().toString();
+                    }
+                });
+                builder.setNegativeButton("Anuluj", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.cancel();
+                    }
+                });
+
+                builder.show();
+            }
+        });
+
         //wczytanie pdf
         mLoadPDF = (Button)findViewById(R.id.loadPDF);
         mLoadPDF.setOnClickListener(new View.OnClickListener() {
@@ -48,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
                     Intent intent = new Intent(MainActivity.this, FileListActivity.class);
                     String path = Environment.getExternalStorageDirectory().getPath();
                     intent.putExtra("path", path);
+                    intent.putExtra("token", token);
                     startActivity(intent);
                 }else {
                     requestPermission();

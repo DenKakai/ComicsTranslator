@@ -7,10 +7,26 @@
     tools:context=".MainActivity"
     android:gravity="center">
 
-        <Button
-            android:id="@+id/loadPDF"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Wczytaj komiks" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            tools:layout_editor_absoluteX="1dp"
+            tools:layout_editor_absoluteY="1dp">
+
+                <Button
+                    android:id="@+id/loadPDF"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Wczytaj komiks" />
+
+                <Button
+                    android:id="@+id/getToken"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Wpisz token" />
+
+        </LinearLayout>
 
 </RelativeLayout>

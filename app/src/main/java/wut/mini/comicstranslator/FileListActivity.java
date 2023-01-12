@@ -21,6 +21,7 @@ public class FileListActivity extends AppCompatActivity {
         TextView noFilesText = findViewById(R.id.nofiles_textview);
 
         String path = getIntent().getStringExtra("path");
+        String token = getIntent().getStringExtra("token");
 
         File root = new File(path);
         File[] filesAndFolders = root.listFiles();
@@ -33,6 +34,6 @@ public class FileListActivity extends AppCompatActivity {
         noFilesText.setVisibility(View.INVISIBLE);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.setAdapter(new MyAdapter(getApplicationContext(), filesAndFolders));
+        recyclerView.setAdapter(new MyAdapter(getApplicationContext(), filesAndFolders, token));
     }
 }
