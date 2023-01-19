@@ -667,6 +667,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
                     try {
                         String authKey = token;
                         Log.d("text to translate", text);
+                        text = fixNumbers(text);
                         Translator translator = new Translator(authKey);
                         if(!Character.isLetter(text.charAt(text.length()-1))) {
                             text = text.substring(0, text.length()-1);
@@ -858,6 +859,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
 
                         try {
                             String authKey = token;
+                            text = fixNumbers(text);
                             Translator translator = new Translator(authKey);
                             TextResult result =
                                     translator.translateText(text.toLowerCase(), null, "pl");
@@ -1240,6 +1242,7 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         String tlum = "";
         try {
             String authKey = token;
+            text = fixNumbers(text);
             Translator translator = new Translator(authKey);
             TextResult result =
                     translator.translateText(text.toLowerCase(), null, "pl");
@@ -1301,5 +1304,52 @@ public class PdfViewerActivity extends AppCompatActivity implements ExampleDialo
         }
 
         return result;
+    }
+
+    public static String fixNumbers(String input) {
+
+        int length = input.length();
+
+        StringBuilder string = new StringBuilder(input);
+
+        if (length > 1) {
+            if (string.charAt(0) == '5' && Character.isLetter(string.charAt(1))) {
+                string.setCharAt(0, 'S');
+            }
+            if (string.charAt(0) == '7' && Character.isLetter(string.charAt(1))) {
+                string.setCharAt(0, 'Z');
+            }
+            if (string.charAt(0) == '0' && Character.isLetter(string.charAt(1))) {
+                string.setCharAt(0, 'O');
+            }
+        }
+
+        if (length > 2) {
+            for(int i = 1; i < length - 1; i++) {
+                if (string.charAt(i) == '5' && (Character.isLetter(string.charAt(i-1)) || Character.isLetter(string.charAt(i+1)))) {
+                    string.setCharAt(i, 'S');
+                }
+                if (string.charAt(i) == '7' && (Character.isLetter(string.charAt(i-1)) || Character.isLetter(string.charAt(i+1)))) {
+                    string.setCharAt(i, 'Z');
+                }
+                if (string.charAt(i) == '0' && (Character.isLetter(string.charAt(i-1)) || Character.isLetter(string.charAt(i+1)))) {
+                    string.setCharAt(i, 'O');
+                }
+            }
+        }
+
+        if (length > 1) {
+            if (string.charAt(length-1) == '5' && Character.isLetter(string.charAt(length-2))) {
+                string.setCharAt(length-1, 'S');
+            }
+            if (string.charAt(length-1) == '7' && Character.isLetter(string.charAt(length-2))) {
+                string.setCharAt(length-1, 'Z');
+            }
+            if (string.charAt(length-1) == '0' && Character.isLetter(string.charAt(length-2))) {
+                string.setCharAt(length-1, 'O');
+            }
+        }
+
+        return string.toString();
     }
 }
